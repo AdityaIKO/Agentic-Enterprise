@@ -17,7 +17,7 @@ export default function Home() {
   return (
     <div>
       <h2>Today</h2>
-      <p className="lead">Your software agents read the business data every time you open this page. They only propose; nothing changes until you approve. Physical work (production, testing, packing, trucking) stays with your people; the agents handle the paperwork, numbers and messages around it.</p>
+      <p className="lead">Your software agents read the business data every time you open this page. They only propose; nothing changes until you approve. Your suppliers make the charcoal; the agents handle pricing, purchase orders, documents, shipment tracking, payments and marketing around it.</p>
       <div className="kpis">
         <div className="kpi"><b>{open.length}</b>open orders</div>
         <div className="kpi"><b>{pending.length}</b>proposals to approve</div>

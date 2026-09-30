@@ -1,4 +1,4 @@
-import type { Incoterm, Material, ParsedRfq } from "../types";
+import type { Category, Incoterm, ParsedRfq } from "../types";
 
 const PORTS: Record<string, { port: string; country: string }> = {
   jeddah: { port: "Jeddah", country: "Saudi Arabia" }, dammam: { port: "Dammam", country: "Saudi Arabia" }, riyadh: { port: "Riyadh (via Dammam)", country: "Saudi Arabia" },
@@ -11,16 +11,27 @@ const PORTS: Record<string, { port: string; country: string }> = {
 const COUNTRIES = ["Saudi Arabia", "Germany", "Netherlands", "Belgium", "South Korea", "Turkey", "United Arab Emirates", "Japan", "UAE", "Korea", "KSA"];
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
-export const MOQ = { "20ft": { min: 12, max: 17 }, "40ft": { min: 25, max: 27 } } as const;   // from krakacoal.com (SOURCE)
+export const MOQ = { "20ft": { min: 12, max: 17 }, "40ft": { min: 25, max: 27 } } as const;   // krakacoal.com
+
+// Grade keywords (your price sheet). Order matters: the first match wins.
+const GRADES: [RegExp, string, Category][] = [
+  [/platinum/i, "coco-platinum", "coconut"], [/premium/i, "coco-premium", "coconut"], [/\bmedium\b/i, "coco-medium", "coconut"],
+  [/(grade\s*ab|\bab\s*grade|\bab\b)/i, "saw-ab", "sawdust"], [/(grade\s*bc|\bbc\s*grade|\bbc\b)/i, "saw-bc", "sawdust"], [/(grade\s*cd|\bcd\s*grade|\bcd\b)/i, "saw-cd", "sawdust"],
+  [/halaban/i, "hard-halaban", "hardwood"], [/tamarind|asam/i, "hard-tamarind", "hardwood"], [/(std\.?|standard)\s*mixed|mixed hardwood/i, "hard-mixed", "hardwood"],
+];
 
 export function parseRfq(text: string): ParsedRfq {
   const t = text.replace(/\s+/g, " ");
   const low = t.toLowerCase();
-  const p: ParsedRfq = { product: null, qtyT: null, container: null, incoterm: null, destination: null, country: null, targetPriceUsdT: null, packaging: null, deadline: null, buyerName: null, missing: [], warnings: [] };
+  const p: ParsedRfq = { category: null, productId: null, gradeText: null, qtyT: null, container: null, incoterm: null, destination: null, country: null, targetPriceUsdT: null, packaging: null, deadline: null, buyerName: null, missing: [], warnings: [] };
 
-  if (/coconut|batok|shell/.test(low)) p.product = "coconut-shell";
-  else if (/briquet|briket|sawdust/.test(low)) p.product = "sawdust-briquette";
-  else if (/hardwood|kayu|mangrove|acacia|teak|bbq charcoal|lump/.test(low)) p.product = "hardwood";
+  for (const [re, id, cat] of GRADES) { const m = t.match(re); if (m) { p.productId = id; p.category = cat; p.gradeText = m[0]; break; } }
+  if (!p.category) {
+    if (/shisha|hookah|coconut|batok|narghile|nargile/.test(low)) p.category = "coconut";
+    else if (/sawdust|briquet|briket/.test(low)) p.category = "sawdust";
+    else if (/hardwood|kayu|mangrove|acacia|teak|bbq|lump|restaurant/.test(low)) p.category = "hardwood";
+  }
+  if (p.category && !p.productId) p.warnings.push(`Grade not stated for ${p.category} charcoal: ask which grade (see Products), or offer the most-ordered one.`);
 
   const qty = t.match(/(\d{1,3}(?:[.,]\d+)?)\s*(mt|metric tons?|tonnes?|tons?|t)\b/i);
   const kg = t.match(/(\d{3,6})\s*kgs?\b/i);
@@ -58,7 +69,7 @@ export function parseRfq(text: string): ParsedRfq {
     const y = t.match(/\b(20\d\d)\b/);
     const now = new Date();
     let year = y ? parseInt(y[1], 10) : now.getFullYear();
-    let mi = MONTHS.indexOf(mon);
+    const mi = MONTHS.indexOf(mon);
     if (!y && mi < now.getMonth()) year += 1;
     p.deadline = new Date(Date.UTC(year, mi + 1, 0)).toISOString().slice(0, 10);   // end of that month
   }
@@ -66,7 +77,7 @@ export function parseRfq(text: string): ParsedRfq {
   const sign = t.match(/(?:regards|best|sincerely|thanks|from)[,:]?\s+([A-Z][\w.&-]+(?:\s[A-Z][\w.&-]+){0,3})/);
   if (sign) p.buyerName = sign[1].trim();
 
-  for (const [k, v] of [["product", p.product], ["quantity", p.qtyT], ["destination", p.country], ["incoterm", p.incoterm], ["shipment deadline", p.deadline]] as const) if (v === null) p.missing.push(k);
+  for (const [k, v] of [["product", p.category], ["grade", p.productId], ["quantity", p.qtyT], ["destination", p.country], ["incoterm", p.incoterm], ["shipment deadline", p.deadline]] as const) if (v === null) p.missing.push(k);
 
   if (p.qtyT !== null && p.container) {
     const m = MOQ[p.container];
@@ -76,4 +87,4 @@ export function parseRfq(text: string): ParsedRfq {
   return p;
 }
 
-export const MATERIAL_LABEL: Record<Material, string> = { "coconut-shell": "Coconut shell charcoal", hardwood: "Hardwood charcoal", "sawdust-briquette": "Sawdust briquette charcoal" };
+export const CATEGORY_LABEL: Record<Category, string> = { coconut: "Coconut shisha charcoal", sawdust: "Sawdust charcoal", hardwood: "Hardwood charcoal" };

@@ -10,8 +10,8 @@ export default function Settings() {
   return (
     <div>
       <h2>Settings</h2>
-      <p className="lead">Cost items, margin target and sourcing rules used by all agents. Replace the demo numbers with yours.</p>
-      <SettingsForm s={num} />
+      <p className="lead">Markup policy, negotiation cap and your own cost items (used by the pricing, negotiation and finance agents). Replace the demo numbers with yours.</p>
+      <SettingsForm s={num} markup={s.settings.markup} />
       <h3>Freight quotes stored (USD per container)</h3>
       <table><tbody>{Object.entries(s.settings.freightUsdPerContainer).map(([c, v]) => <tr key={c}><td>{c}</td><td className="num">{v}</td></tr>)}</tbody></table>
       <h3>Assistant mode</h3>

@@ -1,36 +1,44 @@
-export type Material = "coconut-shell" | "hardwood" | "sawdust-briquette";
 export type Incoterm = "FOB" | "CFR" | "CIF";
 
-export interface Producer {
+export type Category = "coconut" | "sawdust" | "hardwood";
+
+/** A supplier fills whole containers on its own (you have one or two per product line). */
+export interface Supplier {
   id: string;
   name: string;
   region: string;
-  material: Material;
-  capacityKgDay: number;   // realistic daily output, confirmed by the producer
-  priceUsdKg: number;      // price paid to the producer (ex-kiln)
-  quality: number;         // 0..1 running quality score
-  reliability: number;     // 0..1 share of deliveries on time
-  isOwn: boolean;          // own kiln vs external supplier
+  categories: Category[];
+  role: "primary" | "backup";
+  capacityTPerMonth: number;
+  leadDays20ft: number;        // days to produce a 20ft (site: 10)
+  leadDays40ft: number;        // days to produce a 40ft (site: 14)
+  packingDays: number;         // site: packing 3-6 days
+  reliability: number;         // 0..1 share of orders delivered on time and in spec
+  paymentTerms: string;        // free text; unknown until you enter it
   active: boolean;
 }
 
-export interface OwnKiln {
+/** One sellable grade with your buyer price list and your supplier price. */
+export interface Product {
   id: string;
-  name: string;
-  material: Material;
-  tonnesPerBatch: number;      // charcoal output per batch
-  cycleDays: number;           // load + carbonise + cool + unload
-  yieldPct: number;            // charcoal / raw material by weight
+  category: Category;
+  name: string;                // grade name
+  spec: string;
+  packing: string;
+  listPriceUsdT: number;       // buyer price, FOB Central Java
+  listPriceAltUsdT?: number;   // e.g. shisha with +1 kg inner box
+  altLabel?: string;
+  supplierId: string;
+  backupSupplierId?: string;
+  supplierPriceUsdT: number;   // what you pay the supplier
 }
 
-export interface RawStock {
-  material: Material;
-  kg: number;
-  pricePerKg: number;
-}
+export interface MarkupPolicy { targetPct: number; minPct: number; maxPct: number }
 
 export interface ParsedRfq {
-  product: Material | null;
+  category: Category | null;
+  productId: string | null;
+  gradeText: string | null;
   qtyT: number | null;
   container: "20ft" | "40ft" | null;
   incoterm: Incoterm | null;
@@ -57,7 +65,8 @@ export interface Order {
   buyer: string;
   country: string;
   destination: string;
-  product: Material;
+  productId: string;
+  category: Category;
   qtyT: number;
   container: "20ft" | "40ft";
   incoterm: Incoterm;
@@ -65,7 +74,8 @@ export interface Order {
   dpPercent: number;
   deadline: string;          // latest shipment date (ISO)
   status: "confirmed" | "sourcing" | "production" | "ready" | "shipped" | "closed";
-  allocation: { producerId: string; kg: number }[];
+  supplierId: string;
+  poStatus: "none" | "sent" | "confirmed";
   readyDate?: string;
 }
 
@@ -102,13 +112,13 @@ export interface Settings {
   bagKg: number;
   packingUsdPerT: number;
   labUsdPerBatch: number;
+  maxDiscountPct: number;
   inlandUsdPerContainer: number;
   portThcUsdPerContainer: number;
   docsUsdPerShipment: number;
-  bufferPct: number;
-  maxSharePct: number;
-  minQuality: number;
+  markup: Record<Category, MarkupPolicy>;
   approvalValueUsd: number;
+  priorityMarkets: string[];
   freightUsdPerContainer: Record<string, number>;   // by destination country (user-entered quotes)
   verifiedClaims: string[];
 }
@@ -135,10 +145,36 @@ export interface AuditEntry {
   hash: string;
 }
 
+export interface Lead {
+  id: string;
+  companyName: string;
+  legalName?: string;
+  country: string;
+  website?: string;
+  type: "importer" | "distributor" | "wholesaler" | "manufacturer" | "retailer" | "unknown";
+  contactName?: string;
+  contactTitle?: string;
+  email?: string;
+  linkedinUrl?: string;
+  notes: string;
+  source: string;                     // "import", "web search", "sample", ...
+  status: "new" | "verified" | "contacted" | "replied" | "rfq" | "won" | "lost" | "skip";
+  score: number;
+  tier: "A" | "B" | "C";
+  reasons: string[];
+  flags: string[];
+  verification?: { checkedAt: string; found: boolean; error?: boolean; lei?: string; legalName?: string; country?: string; entityStatus?: string; matchPct?: number; note?: string };
+  scan?: { checkedAt: string; ok: boolean; title?: string; description?: string; emails: string[]; terms: string[]; note?: string };
+  outreach: { step: number; at: string }[];
+  nextAction?: string;                // ISO date
+  createdAt: string;
+}
+
 export interface Store {
-  producers: Producer[];
-  kilns: OwnKiln[];
-  rawStock: RawStock[];
+  version: number;
+  leads: Lead[];
+  suppliers: Supplier[];
+  products: Product[];
   inquiries: Inquiry[];
   orders: Order[];
   shipments: Shipment[];

@@ -23,14 +23,20 @@ export function decide(s: Store, id: string, decision: "approved" | "rejected", 
       audit(s, "system", "order.created", o.id);
       break;
     }
-    case "set_allocation": {
+    case "send_po": {
       const o = s.orders.find((x) => x.id === d.orderId);
-      if (o) { o.allocation = d.allocation; if (o.status === "confirmed") o.status = "sourcing"; }
+      if (o) { o.supplierId = d.supplierId; o.poStatus = "sent"; if (o.status === "confirmed") o.status = "sourcing"; }
       break;
     }
-    case "set_production": {
-      const o = s.orders.find((x) => x.id === d.orderId);
-      if (o) { o.status = "production"; o.readyDate = d.readyDate; }
+    case "send_outreach": {
+      const l = s.leads.find((x) => x.id === d.leadId);
+      if (l) {
+        l.outreach.push({ step: d.step, at: new Date().toISOString() });
+        if (["new", "verified"].includes(l.status)) l.status = "contacted";
+        const next = [0, 4, 10][d.step] as number | undefined;
+        l.nextAction = next !== undefined && d.step < 3 ? new Date(Date.now() + (next - [0, 4, 10][d.step - 1]) * 86400000).toISOString().slice(0, 10) : undefined;
+      }
+      audit(s, "system", "outreach.recorded", `${d.leadId} step ${d.step} approved. You send it (copy the text) or through an integration you connect.`);
       break;
     }
     case "send_reminder": case "publish_content": case "note":

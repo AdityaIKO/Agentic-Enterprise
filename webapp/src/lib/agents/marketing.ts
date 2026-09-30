@@ -1,5 +1,5 @@
-import type { Channel, Material, Settings } from "../types";
-import { MATERIAL_LABEL } from "./rfq";
+import type { Category, Channel, Settings } from "../types";
+import { CATEGORY_LABEL } from "./rfq";
 
 function mulberry32(a: number) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function gamma(k: number, rnd: () => number): number {     // Marsaglia-Tsang (k >= 1) with boost for k < 1
@@ -48,12 +48,12 @@ export function claimsCheck(text: string, s: Settings) {
 }
 
 export type ContentKind = "linkedin" | "email" | "google-ads";
-export function contentDraft(kind: ContentKind, product: Material, s: Settings): string {
-  const name = MATERIAL_LABEL[product];
+export function contentDraft(kind: ContentKind, product: Category, s: Settings): string {
+  const name = CATEGORY_LABEL[product];
   const facts = s.verifiedClaims.slice(0, 4).join("; ");
   if (kind === "google-ads")
-    return [`Headline 1: ${name} Direct from Indonesia`, "Headline 2: Lab-Tested Batches, FOB or CIF", "Headline 3: Request a Full-Container Quote", `Description: ${name} for BBQ and hookah buyers. MOQ one full container. Shipped from Surabaya. Send your RFQ today.`].join("\n");
+    return [`Headline 1: ${name} Direct from Indonesia`, "Headline 2: Lab-Verified Batches, FOB Central Java", "Headline 3: Request a Full-Container Quote", `Description: ${name} for BBQ and hookah buyers. MOQ one full container. Send your RFQ today.`].join("\n");
   if (kind === "email")
-    return [`Subject: ${name} - full-container supply from Indonesia`, "", "Hello,", "", `We supply ${name.toLowerCase()} from a vetted producer network in Indonesia (${facts}).`, "If you are sourcing for the coming quarter, reply with quantity, destination port and packing, and we will send a quote within one working day.", "", "Best regards,", "PT. Kraka Coal Indonesia"].join("\n");
-  return [`Sourcing ${name.toLowerCase()} for your next order?`, "", `We ship full containers from Surabaya: ${facts}.`, "Send us your quantity, destination port and packing, and we reply with a quote.", "", "#charcoal #coconutshellcharcoal #export #indonesia"].join("\n");
+    return [`Subject: ${name} - full-container supply from Indonesia`, "", "Hello,", "", `We supply ${name.toLowerCase()} from Indonesia (${facts}).`, "If you are sourcing for the coming quarter, reply with quantity, destination port and packing, and we will send a quote within one working day.", "", "Best regards,", "PT. Kraka Coal Indonesia"].join("\n");
+  return [`Sourcing ${name.toLowerCase()} for your next order?`, "", `We ship full containers from Central Java: ${facts}.`, "Send us your quantity, destination port and packing, and we reply with a quote.", "", "#charcoal #coconutshellcharcoal #export #indonesia"].join("\n");
 }

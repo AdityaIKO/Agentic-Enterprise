@@ -1,16 +1,16 @@
-import type { Material, Order } from "../types";
-import { MATERIAL_LABEL } from "./rfq";
+import type { Category, Order, Product } from "../types";
+import { CATEGORY_LABEL } from "./rfq";
 
-export const HS: Record<Material, { code: string; text: string }> = {
-  "coconut-shell": { code: "4402.20", text: "Wood charcoal (including shell or nut charcoal): of shell or nut" },
+export const HS: Record<Category, { code: string; text: string }> = {
+  coconut: { code: "4402.20", text: "Wood charcoal (including shell or nut charcoal): of shell or nut" },
   hardwood: { code: "4402.90", text: "Wood charcoal (including shell or nut charcoal): other" },
-  "sawdust-briquette": { code: "4402.90", text: "Wood charcoal: other (carbonised sawdust briquettes)" },
+  sawdust: { code: "4402.90", text: "Wood charcoal: other (carbonised sawdust)" },
 };
 
 export interface DocItem { name: string; why: string; owner: "you" | "lab" | "forwarder" | "buyer" }
 
 /** Checklist of documents commonly needed. It is a starting point: always confirm with the buyer, the forwarder and the destination customs broker. */
-export function checklist(o: Pick<Order, "country" | "product" | "incoterm">): DocItem[] {
+export function checklist(o: Pick<Order, "country" | "category" | "incoterm">): DocItem[] {
   const items: DocItem[] = [
     { name: "Commercial invoice", why: "Basis for customs value and payment.", owner: "you" },
     { name: "Packing list", why: "Bags, weights, container and seal numbers.", owner: "you" },
@@ -29,28 +29,28 @@ export function checklist(o: Pick<Order, "country" | "product" | "incoterm">): D
   return items;
 }
 
-export function invoiceDraft(o: Order, seller = "PT. Kraka Coal Indonesia") {
-  const hs = HS[o.product];
+export function invoiceDraft(o: Order, prod: Product, seller = "PT. Kraka Coal Indonesia") {
+  const hs = HS[o.category];
   const total = o.qtyT * o.priceUsdT;
   return [
     `COMMERCIAL INVOICE (DRAFT)  -  ${o.id}`,
     `Seller: ${seller}`,
     `Buyer: ${o.buyer}, ${o.country}`,
-    `Goods: ${MATERIAL_LABEL[o.product]}, ${o.qtyT} MT, packed in bags`,
+    `Goods: ${prod.name} (${CATEGORY_LABEL[o.category]}), ${o.qtyT} MT, ${prod.packing}`,
     `HS code (verify with your customs broker): ${hs.code}  -  ${hs.text}`,
-    `Terms: ${o.incoterm} ${o.destination}`,
+    `Terms: ${o.incoterm} ${o.incoterm === "FOB" ? "Central Java" : o.destination}`,
     `Unit price: USD ${o.priceUsdT} per MT    Total: USD ${total.toLocaleString("en-US")}`,
     `Payment: ${o.dpPercent}% down payment, balance before release of original documents (edit to match the contract).`,
     `Latest shipment date: ${o.deadline}`,
   ].join("\n");
 }
 
-export function packingListDraft(o: Order, bagKg: number) {
+export function packingListDraft(o: Order, prod: Product, bagKg: number) {
   const bags = Math.ceil((o.qtyT * 1000) / bagKg);
   return [
     `PACKING LIST (DRAFT)  -  ${o.id}`,
-    `Goods: ${MATERIAL_LABEL[o.product]}`,
-    `Packing: ${bags} bags of ${bagKg} kg = ${(bags * bagKg / 1000).toFixed(2)} MT net`,
+    `Goods: ${prod.name}`,
+    `Packing: ${bags} boxes/bags of ${bagKg} kg = ${(bags * bagKg / 1000).toFixed(2)} MT net`,
     `Container: 1 x ${o.container} (seal and container numbers: to be filled by the warehouse after stuffing)`,
     `Gross weight: to be filled after weighing`,
   ].join("\n");

@@ -1,7 +1,8 @@
 import type { Store } from "../types";
 import { receivables, cashGap } from "./finance";
 import { shipmentRisk } from "./logistics";
-import { weeklyCapacityKg } from "./production";
+import { procurementPlan } from "./procurement";
+import { marginTable } from "./quote";
 import { budgetPlan } from "./marketing";
 
 export interface BriefItem { agent: string; priority: 1 | 2 | 3; text: string; href: string }
@@ -23,17 +24,27 @@ export function briefing(s: Store): BriefItem[] {
     if (r.level !== "low") out.push({ agent: "Logistics", priority: r.level === "high" ? 1 : 2, text: `${sh.id} (${o.buyer}) risk ${r.level}: ${r.reasons[0] ?? ""}`, href: `/orders/${o.id}` });
   }
   for (const o of s.orders) {
-    if (o.status === "confirmed") out.push({ agent: "Sourcing", priority: 2, text: `${o.id} (${o.buyer}, ${o.qtyT} t) has no supplier allocation yet; deadline in ${days(s.today, o.deadline)} days.`, href: `/orders/${o.id}` });
-    if (["confirmed", "sourcing"].includes(o.status) && days(s.today, o.deadline) < 14) out.push({ agent: "Sourcing", priority: 1, text: `${o.id} deadline in ${days(s.today, o.deadline)} days and cargo is not yet ready.`, href: `/orders/${o.id}` });
+    const pr = s.products.find((x) => x.id === o.productId);
+    const dl = days(s.today, o.deadline);
+    if (o.poStatus === "none" && ["confirmed", "sourcing"].includes(o.status)) {
+      let plan;
+      try { plan = pr ? procurementPlan(o, pr, s) : null; } catch { plan = null; }
+      const tight = plan && !plan.chosen.onTime;
+      out.push({ agent: "Procurement", priority: tight || dl < 14 ? 1 : 2, text: `${o.id} (${o.buyer}, ${o.qtyT} t): no purchase order to the supplier yet; ${dl} days to the latest shipment date${tight ? ", and lead time is already tight" : ""}.`, href: `/orders/${o.id}` });
+    }
+    if (o.poStatus === "sent") out.push({ agent: "Procurement", priority: 2, text: `${o.id}: purchase order sent, supplier has not confirmed yet.`, href: `/orders/${o.id}` });
+    if (pr && o.priceUsdT < pr.supplierPriceUsdT * (1 + s.settings.markup[o.category].minPct / 100) - 0.5) out.push({ agent: "Pricing", priority: 1, text: `${o.id} is priced below your minimum markup (${s.settings.markup[o.category].minPct}%).`, href: `/orders/${o.id}` });
   }
+  const hot = s.leads.filter((l) => l.tier === "A" && ["new", "verified"].includes(l.status)).length;
+  if (hot) out.push({ agent: "Lead finder", priority: 2, text: `${hot} tier-A lead(s) not contacted yet.`, href: "/leads" });
+  const due = s.leads.filter((l) => l.nextAction && l.nextAction <= s.today && ["contacted"].includes(l.status)).length;
+  if (due) out.push({ agent: "Lead finder", priority: 2, text: `${due} lead follow-up(s) due today or overdue.`, href: "/leads" });
   const gap = cashGap(s);
   if (gap.totalGapUsd > 0) out.push({ agent: "Finance", priority: 2, text: `Producer payments for open orders exceed down payments received by about USD ${gap.totalGapUsd.toLocaleString("en-US")}.`, href: "/finance" });
-  for (const st of s.rawStock) {
-    const weeklyRaw = weeklyCapacityKg(s.kilns, st.material) / ((s.kilns.find((k) => k.material === st.material)?.yieldPct ?? 25) / 100);
-    if (weeklyRaw && st.kg < weeklyRaw) out.push({ agent: "Production", priority: 2, text: `Raw ${st.material} stock (${st.kg} kg) covers less than one week of kiln use (${Math.round(weeklyRaw)} kg).`, href: "/production" });
-  }
   const plan = budgetPlan(s.channels, 500);
   const best = [...plan].sort((a, b) => b.probBestPct - a.probBestPct)[0];
+  const mt = marginTable(s.products, s.settings).sort((x, y) => y.marginPerContainer - x.marginPerContainer)[0];
+  if (mt) out.push({ agent: "Pricing", priority: 3, text: `Highest margin per 40ft container: ${mt.product.name} (USD ${mt.marginPerContainer.toLocaleString("en-US")}, markup ${mt.markupPct}%).`, href: "/products" });
   if (best) out.push({ agent: "Marketing", priority: 3, text: `Best channel so far: ${best.channel} (${best.probBestPct}% chance of being best). Suggested weekly share ${best.suggestedPct}%.`, href: "/marketing" });
   return out.sort((a, b) => a.priority - b.priority);
 }

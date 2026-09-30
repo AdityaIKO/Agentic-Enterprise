@@ -2,12 +2,14 @@ import { load } from "@/lib/store";
 import { budgetPlan } from "@/lib/agents/marketing";
 import { ContentForm, ProposalCard } from "@/components/Actions";
 import { usd } from "@/lib/format";
+import { marginTable } from "@/lib/agents/quote";
 
 export const dynamic = "force-dynamic";
 
 export default function Marketing() {
   const s = load();
   const plan = budgetPlan(s.channels, 500);
+  const mt = marginTable(s.products, s.settings).sort((a, b) => b.marginPerContainer - a.marginPerContainer);
   const props = s.proposals.filter((p) => p.status === "pending" && p.agent === "Marketing agent");
   return (
     <div>
@@ -19,6 +21,8 @@ export default function Marketing() {
         <tbody>{plan.map((r) => <tr key={r.channel}><td>{r.channel}</td><td className="num">{usd(r.spendUsd)}</td><td className="num">{r.rfqs}</td><td className="num">{r.costPerRfq ? usd(r.costPerRfq) : "-"}</td><td className="num">{r.probBestPct}%</td><td className="num"><b>{usd(r.suggestedUsd)}</b> ({r.suggestedPct}%)</td></tr>)}</tbody>
       </table>
       <p className="mute">Method: Thompson sampling. Channels with few results still get a share (at least 5%) so the estimate keeps improving. Enter your real spend and RFQ counts in <code>data/store.json</code> (channels).</p>
+      <h3>Which product to push (margin per 40ft container)</h3>
+      <table><thead><tr><th>Product</th><th className="num">Markup</th><th className="num">Margin per 40ft</th></tr></thead><tbody>{mt.map((r) => <tr key={r.product.id}><td>{r.product.name}</td><td className="num">{r.markupPct}%</td><td className="num">{usd(r.marginPerContainer)}</td></tr>)}</tbody></table>
       <h3>Draft content (guardrail: verified claims only)</h3>
       <p className="mute">Verified claims used: {s.settings.verifiedClaims.join("; ")}. Anything else (certifications, capacity figures, guarantees, price superlatives) is flagged for your review.</p>
       <ContentForm />

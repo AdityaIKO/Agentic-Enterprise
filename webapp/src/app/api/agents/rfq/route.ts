@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const parsed = parseRfq(text);
   const inq = { id: uid("RFQ"), raw: text, createdAt: new Date().toISOString(), parsed, status: "new" as const };
   s.inquiries.unshift(inq);
-  audit(s, "RFQ agent", "inquiry.parsed", `${inq.id}: ${parsed.product ?? "?"}, ${parsed.qtyT ?? "?"} t, ${parsed.country ?? "?"}; missing: ${parsed.missing.join(", ") || "none"}`);
+  audit(s, "RFQ agent", "inquiry.parsed", `${inq.id}: ${parsed.category ?? "?"}, ${parsed.qtyT ?? "?"} t, ${parsed.country ?? "?"}; missing: ${parsed.missing.join(", ") || "none"}`);
   save(s);
   return NextResponse.json({ id: inq.id });
 }

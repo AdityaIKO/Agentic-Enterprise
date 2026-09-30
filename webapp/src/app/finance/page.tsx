@@ -13,7 +13,7 @@ export default function Finance() {
   return (
     <div>
       <h2>Finance agent</h2>
-      <p className="lead">Tracks unpaid invoices, drafts payment reminders, and checks whether the down payments you received cover what you must pay producers. It does not move money.</p>
+      <p className="lead">Tracks unpaid invoices, drafts payment reminders, and checks whether the down payments you received cover what you must pay suppliers, with the margin you expect on each order. It does not move money.</p>
       <h3>Unpaid invoices</h3>
       <table>
         <thead><tr><th>Invoice</th><th>Buyer</th><th>Type</th><th className="num">Amount</th><th>Due</th><th>Status</th></tr></thead>
@@ -21,10 +21,10 @@ export default function Finance() {
       </table>
       <div className="row"><ActionButton url="/api/finance/reminders" label="Draft reminders for overdue and due-soon invoices" /></div>
       {props.map((p) => <ProposalCard key={p.id} p={p} />)}
-      <h3>Cash needed for producers vs. down payments received</h3>
+      <h3>Supplier payments vs. down payments received, and expected margin</h3>
       <table>
-        <thead><tr><th>Order</th><th className="num">Producer cost (est.)</th><th className="num">DP received</th><th className="num">Gap</th></tr></thead>
-        <tbody>{gap.rows.map((g) => <tr key={g.orderId}><td>{g.orderId}</td><td className="num">{usd(g.needUsd)}</td><td className="num">{usd(g.dpReceivedUsd)}</td><td className={"num " + (g.gapUsd ? "bad" : "")}>{usd(g.gapUsd)}</td></tr>)}<tr><th>Total gap</th><th></th><th></th><th className="num">{usd(gap.totalGapUsd)}</th></tr></tbody>
+        <thead><tr><th>Order</th><th className="num">Supplier cost</th><th className="num">DP received</th><th className="num">Gap</th><th className="num">Gross margin</th><th className="num">Markup</th></tr></thead>
+        <tbody>{gap.rows.map((g) => <tr key={g.orderId}><td>{g.orderId}</td><td className="num">{usd(g.needUsd)}</td><td className="num">{usd(g.dpReceivedUsd)}</td><td className={"num " + (g.gapUsd ? "bad" : "")}>{usd(g.gapUsd)}</td><td className="num">{usd(g.grossMarginUsd)}</td><td className="num">{g.markupPct}%</td></tr>)}<tr><th>Total gap</th><th></th><th></th><th className="num">{usd(gap.totalGapUsd)}</th><th></th><th></th></tr></tbody>
       </table>
     </div>
   );

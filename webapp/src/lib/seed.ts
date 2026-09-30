@@ -1,45 +1,54 @@
-import type { Store } from "./types";
+import type { Store, Product, Supplier, Lead } from "./types";
+import { scoreLead } from "./agents/leads";
 
-// Demo data only. Replace via the app (or edit data/store.json). Prices are illustrative, NOT KrakaCoal's real prices.
+export const STORE_VERSION = 3;
+
+// Buyer prices below are YOUR price sheet (FOB Central Java, September 2026), entered from your slides.
+// SUPPLIER PRICES ARE DEMO VALUES: back-calculated from your list price and the typical markup (coconut 10%, sawdust ~8.5%, hardwood ~32%).
+// Replace them with the real supplier prices in the Products page.
+const back = (list: number, markupPct: number) => Math.round(list / (1 + markupPct / 100));
+
 export function seedStore(): Store {
   const today = new Date().toISOString().slice(0, 10);
   const d = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
-  return {
+  const suppliers: Supplier[] = [
+    { id: "S-COCO", name: "Coconut supplier (primary)", region: "Central Java", categories: ["coconut"], role: "primary", capacityTPerMonth: 120, leadDays20ft: 10, leadDays40ft: 14, packingDays: 4, reliability: 0.93, paymentTerms: "not entered", active: true },
+    { id: "S-COCO2", name: "Coconut supplier (backup)", region: "East Java", categories: ["coconut"], role: "backup", capacityTPerMonth: 60, leadDays20ft: 12, leadDays40ft: 16, packingDays: 4, reliability: 0.85, paymentTerms: "not entered", active: true },
+    { id: "S-SAW", name: "Sawdust charcoal supplier", region: "Central Java", categories: ["sawdust"], role: "primary", capacityTPerMonth: 90, leadDays20ft: 10, leadDays40ft: 14, packingDays: 4, reliability: 0.9, paymentTerms: "not entered", active: true },
+    { id: "S-HARD", name: "Hardwood supplier (primary)", region: "Central Java", categories: ["hardwood"], role: "primary", capacityTPerMonth: 150, leadDays20ft: 10, leadDays40ft: 14, packingDays: 4, reliability: 0.88, paymentTerms: "not entered", active: true },
+    { id: "S-HARD2", name: "Hardwood supplier (backup)", region: "Kalimantan", categories: ["hardwood"], role: "backup", capacityTPerMonth: 100, leadDays20ft: 14, leadDays40ft: 18, packingDays: 4, reliability: 0.8, paymentTerms: "not entered", active: true },
+  ];
+  const products: Product[] = [
+    { id: "coco-platinum", category: "coconut", name: "Coconut shisha: Platinum", spec: "Ash 1.8-2%, burn 3 h", packing: "10 kg full-colour master box (+1 kg inner box option)", listPriceUsdT: 1600, listPriceAltUsdT: 1750, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: back(1600, 10) },
+    { id: "coco-premium", category: "coconut", name: "Coconut shisha: Premium", spec: "Ash 2.1-2.4%, burn 2.5 h (most-ordered grade)", packing: "10 kg master box (+1 kg inner box option)", listPriceUsdT: 1450, listPriceAltUsdT: 1600, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: back(1450, 10) },
+    { id: "coco-medium", category: "coconut", name: "Coconut shisha: Medium", spec: "Ash 2.5-3%, burn 2 h (economy)", packing: "10 kg master box (+1 kg inner box option)", listPriceUsdT: 1300, listPriceAltUsdT: 1450, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: back(1300, 10) },
+    { id: "saw-ab", category: "sawdust", name: "Sawdust charcoal: Grade AB", spec: "Up to 30 cm, A+B mix, longest burn", packing: "10-30 kg master box", listPriceUsdT: 850, supplierId: "S-SAW", supplierPriceUsdT: back(850, 8.5) },
+    { id: "saw-bc", category: "sawdust", name: "Sawdust charcoal: Grade BC", spec: "Up to 20 cm, B+C mix, shorter burn", packing: "10-30 kg master box", listPriceUsdT: 790, supplierId: "S-SAW", supplierPriceUsdT: back(790, 8.5) },
+    { id: "saw-cd", category: "sawdust", name: "Sawdust charcoal: Grade CD", spec: "Up to 10 cm, C+D mix, shortest burn", packing: "10-30 kg master box", listPriceUsdT: 750, supplierId: "S-SAW", supplierPriceUsdT: back(750, 8.5) },
+    { id: "hard-halaban", category: "hardwood", name: "Hardwood: Halaban", spec: "6,800-7,700 kcal/kg, 5-8 h burn", packing: "10-20 kg bag", listPriceUsdT: 410, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: back(410, 32.5) },
+    { id: "hard-tamarind", category: "hardwood", name: "Hardwood: Tamarind", spec: "6,500-7,500 kcal/kg, 5-7 h burn", packing: "10-20 kg bag", listPriceUsdT: 350, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: back(350, 32.5) },
+    { id: "hard-mixed", category: "hardwood", name: "Hardwood: Std. Mixed", spec: "5,000-6,500 kcal/kg, 3-6 h burn", packing: "10-20 kg bag", listPriceUsdT: 300, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: back(300, 32.5) },
+  ];
+  const st: Store = {
+    version: STORE_VERSION,
     today,
-    producers: [
-      { id: "P01", name: "Kilang Batok Lampung 1", region: "Lampung", material: "coconut-shell", capacityKgDay: 900, priceUsdKg: 0.42, quality: 0.86, reliability: 0.92, isOwn: false, active: true },
-      { id: "P02", name: "Kilang Batok Lampung 2", region: "Lampung", material: "coconut-shell", capacityKgDay: 700, priceUsdKg: 0.40, quality: 0.78, reliability: 0.88, isOwn: false, active: true },
-      { id: "P03", name: "Batok Sulut Mandiri", region: "Sulawesi Utara", material: "coconut-shell", capacityKgDay: 1100, priceUsdKg: 0.44, quality: 0.9, reliability: 0.85, isOwn: false, active: true },
-      { id: "P04", name: "Arang Batok Jawa Timur", region: "Jawa Timur", material: "coconut-shell", capacityKgDay: 600, priceUsdKg: 0.46, quality: 0.82, reliability: 0.95, isOwn: false, active: true },
-      { id: "P05", name: "Kiln Sendiri Probolinggo", region: "Jawa Timur", material: "coconut-shell", capacityKgDay: 800, priceUsdKg: 0.36, quality: 0.88, reliability: 0.97, isOwn: true, active: true },
-      { id: "P06", name: "Kayu Keras Kalimantan", region: "Kalimantan", material: "hardwood", capacityKgDay: 1200, priceUsdKg: 0.38, quality: 0.8, reliability: 0.83, isOwn: false, active: true },
-      { id: "P07", name: "Hardwood Sumatra Utara", region: "Sumatra Utara", material: "hardwood", capacityKgDay: 950, priceUsdKg: 0.41, quality: 0.84, reliability: 0.9, isOwn: false, active: true },
-      { id: "P08", name: "Kiln Sendiri Jombang (kayu)", region: "Jawa Timur", material: "hardwood", capacityKgDay: 500, priceUsdKg: 0.35, quality: 0.87, reliability: 0.96, isOwn: true, active: true },
-      { id: "P09", name: "Briket Serbuk Jepara", region: "Jawa Tengah", material: "sawdust-briquette", capacityKgDay: 800, priceUsdKg: 0.5, quality: 0.75, reliability: 0.8, isOwn: false, active: true },
-      { id: "P10", name: "Batok Sulsel Karya", region: "Sulawesi Selatan", material: "coconut-shell", capacityKgDay: 650, priceUsdKg: 0.43, quality: 0.55, reliability: 0.7, isOwn: false, active: true },
-    ],
-    kilns: [
-      { id: "K1", name: "Kiln batok Probolinggo (drum retort)", material: "coconut-shell", tonnesPerBatch: 1.2, cycleDays: 2, yieldPct: 30 },
-      { id: "K2", name: "Kiln kayu Jombang", material: "hardwood", tonnesPerBatch: 2.5, cycleDays: 6, yieldPct: 22 },
-    ],
-    rawStock: [
-      { material: "coconut-shell", kg: 6500, pricePerKg: 0.11 },
-      { material: "hardwood", kg: 4000, pricePerKg: 0.09 },
-    ],
+    suppliers,
+    products,
+    leads: [],   // filled below with clearly fictional SAMPLE leads
     inquiries: [],
     orders: [
-      { id: "SO-2401", buyer: "Al Nour Trading", country: "Saudi Arabia", destination: "Jeddah", product: "coconut-shell", qtyT: 25, container: "40ft", incoterm: "CFR", priceUsdT: 780, dpPercent: 30, deadline: d(21), status: "sourcing", allocation: [] },
-      { id: "SO-2402", buyer: "Hookah Supply GmbH", country: "Germany", destination: "Hamburg", product: "coconut-shell", qtyT: 17, container: "20ft", incoterm: "FOB", priceUsdT: 720, dpPercent: 40, deadline: d(9), status: "production", allocation: [], readyDate: d(7) },
-      { id: "SO-2403", buyer: "BBQ Master Korea", country: "South Korea", destination: "Busan", product: "hardwood", qtyT: 27, container: "40ft", incoterm: "CIF", priceUsdT: 650, dpPercent: 30, deadline: d(35), status: "confirmed", allocation: [] },
+      { id: "SO-2401", buyer: "Al Nour Trading", country: "Saudi Arabia", destination: "Jeddah", productId: "coco-premium", category: "coconut", qtyT: 25, container: "40ft", incoterm: "CFR", priceUsdT: 1450, dpPercent: 30, deadline: d(28), status: "confirmed", supplierId: "S-COCO", poStatus: "none" },
+      { id: "SO-2402", buyer: "Hookah Supply GmbH", country: "Germany", destination: "Hamburg", productId: "coco-platinum", category: "coconut", qtyT: 12, container: "20ft", incoterm: "FOB", priceUsdT: 1600, dpPercent: 40, deadline: d(9), status: "production", supplierId: "S-COCO", poStatus: "confirmed", readyDate: d(7) },
+      { id: "SO-2403", buyer: "BBQ Master Korea", country: "South Korea", destination: "Busan", productId: "hard-halaban", category: "hardwood", qtyT: 25, container: "40ft", incoterm: "FOB", priceUsdT: 410, dpPercent: 30, deadline: d(35), status: "confirmed", supplierId: "S-HARD", poStatus: "none" },
     ],
     shipments: [
-      { id: "SH-01", orderId: "SO-2402", carrier: "ColdLine-B", vessel: "MV Baltic Star", closing: d(8), etd: d(10), eta: d(38), status: "docs", docsDone: ["Commercial invoice"] },
+      { id: "SH-01", orderId: "SO-2402", carrier: "Carrier B", vessel: "MV Baltic Star", closing: d(8), etd: d(10), eta: d(38), status: "docs", docsDone: ["Commercial invoice"] },
     ],
     invoices: [
-      { id: "INV-2402-DP", orderId: "SO-2402", kind: "DP", amountUsd: 4896, due: d(-12), paid: true },
-      { id: "INV-2402-BAL", orderId: "SO-2402", kind: "Balance", amountUsd: 7344, due: d(3), paid: false },
-      { id: "INV-2401-DP", orderId: "SO-2401", kind: "DP", amountUsd: 5850, due: d(-2), paid: false },
-      { id: "INV-2403-DP", orderId: "SO-2403", kind: "DP", amountUsd: 5265, due: d(5), paid: false },
+      { id: "INV-2402-DP", orderId: "SO-2402", kind: "DP", amountUsd: 7680, due: d(-12), paid: true },
+      { id: "INV-2402-BAL", orderId: "SO-2402", kind: "Balance", amountUsd: 11520, due: d(3), paid: false },
+      { id: "INV-2401-DP", orderId: "SO-2401", kind: "DP", amountUsd: 10875, due: d(-2), paid: false },
+      { id: "INV-2403-DP", orderId: "SO-2403", kind: "DP", amountUsd: 3075, due: d(5), paid: false },
     ],
     channels: [
       { id: "ch1", name: "Google Ads (search)", spendUsd: 600, qualifiedRfqs: 3 },
@@ -49,28 +58,41 @@ export function seedStore(): Store {
       { id: "ch5", name: "SEO content", spendUsd: 200, qualifiedRfqs: 1 },
     ],
     settings: {
-      marginTargetPct: 14,
+      markup: { coconut: { targetPct: 10, minPct: 9, maxPct: 12 }, sawdust: { targetPct: 8.5, minPct: 7, maxPct: 10 }, hardwood: { targetPct: 32.5, minPct: 25, maxPct: 40 } },
+      maxDiscountPct: 1.5,
       bagKg: 10,
-      packingUsdPerT: 28,
+      packingUsdPerT: 0,
       labUsdPerBatch: 90,
       inlandUsdPerContainer: 260,
       portThcUsdPerContainer: 180,
       docsUsdPerShipment: 120,
-      bufferPct: 15,
-      maxSharePct: 30,
-      minQuality: 0.6,
+      marginTargetPct: 10,
       approvalValueUsd: 30000,
+      priorityMarkets: ["Saudi Arabia", "United Arab Emirates", "Turkey", "Germany", "Netherlands", "South Korea", "Japan"],
       freightUsdPerContainer: { "Saudi Arabia": 2100, Germany: 2900, "South Korea": 1500, Turkey: 2600, Japan: 1600, "United Arab Emirates": 1400 },
       verifiedClaims: [
-        "coconut shell charcoal",
-        "hardwood charcoal",
-        "lab-tested batches",
-        "shipped from Surabaya",
+        "coconut shisha charcoal in Platinum, Premium and Medium grades",
+        "sawdust charcoal in grades AB, BC and CD",
+        "hardwood charcoal: Halaban, Tamarind and standard mixed",
+        "lab-verified",
+        "FOB Central Java prices",
+        "10 kg master box packing",
         "MOQ one full container",
-        "FOB or CIF terms",
       ],
     },
     proposals: [],
     audit: [],
   };
+  // FICTIONAL sample leads to show how the Lead agent scores and prioritises. Real leads come from Import or Discover.
+  const mk = (n: number, l: Partial<Lead>): Lead => ({ id: `LD-${100 + n}`, companyName: "", country: "", type: "unknown", notes: "", source: "sample", status: "new", score: 0, tier: "C", reasons: [], flags: [], outreach: [], createdAt: new Date().toISOString(), ...l } as Lead);
+  const samples: Lead[] = [
+    mk(1, { companyName: "Sample Hookah Trading LLC (SAMPLE)", country: "United Arab Emirates", website: "sample-hookah-trading.example", type: "importer", contactName: "A. Buyer", contactTitle: "Purchasing Manager", email: "purchasing@sample-hookah-trading.example", notes: "Importer and distributor of shisha charcoal, imports by the container" }),
+    mk(2, { companyName: "Sample Shisha Import GmbH (SAMPLE)", country: "Germany", website: "sample-shisha-import.example", type: "importer", contactName: "B. Einkauf", contactTitle: "Head of Sourcing", email: "b.einkauf@sample-shisha-import.example", notes: "Wholesale hookah and coconut charcoal, monthly volume 3 FCL" }),
+    mk(3, { companyName: "Sample Nargile Ithalat A.S. (SAMPLE)", country: "Turkey", type: "importer", linkedinUrl: "https://www.linkedin.com/company/sample-nargile", notes: "Nargile charcoal importer" }),
+    mk(4, { companyName: "Sample BBQ Korea Co., Ltd. (SAMPLE)", country: "South Korea", website: "sample-bbq-korea.example", type: "distributor", contactTitle: "Owner", email: "info@sample-bbq-korea.example", notes: "BBQ restaurant charcoal distributor, sawdust and hardwood" }),
+    mk(5, { companyName: "Sample Grill Japan K.K. (SAMPLE)", country: "Japan", type: "wholesaler", notes: "Grill supplies wholesaler" }),
+    mk(6, { companyName: "Sample Corner Shop (SAMPLE)", country: "United States", type: "retailer", email: "corner@gmail.example", notes: "Small retail shop selling grills" }),
+  ];
+  st.leads = samples.map((l) => { const r = scoreLead(l, st.settings); return { ...l, score: r.score, tier: r.tier, reasons: r.reasons, flags: r.flags }; });
+  return st;
 }

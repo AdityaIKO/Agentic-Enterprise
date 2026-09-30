@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { load, save, propose } from "@/lib/store";
 import { contentDraft, claimsCheck, type ContentKind } from "@/lib/agents/marketing";
 import { polish } from "@/lib/llm";
-import type { Material } from "@/lib/types";
+import type { Category } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { kind, product } = (await req.json()) as { kind: ContentKind; product: Material };
+  const { kind, product } = (await req.json()) as { kind: ContentKind; product: Category };
   const s = load();
   const base = contentDraft(kind, product, s.settings);
   const { text, usedLlm } = await polish(`Make this ${kind} more natural for importers. Keep it short.`, base);

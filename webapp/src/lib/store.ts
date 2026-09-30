@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { Store, Proposal, AuditEntry } from "./types";
-import { seedStore } from "./seed";
+import { seedStore, STORE_VERSION } from "./seed";
 
 // File-backed JSON store: simple, deployable on any host with a persistent volume (Docker, VPS, Railway, Fly).
 // For serverless (Vercel) swap load()/save() for a Postgres/KV client; the agents themselves are pure functions.
@@ -13,6 +13,7 @@ export function load(): Store {
   if (cache) return cache;
   try {
     cache = JSON.parse(fs.readFileSync(FILE, "utf8")) as Store;
+    if (cache.version !== STORE_VERSION) throw new Error("old data format");
   } catch {
     cache = seedStore();
     save(cache);

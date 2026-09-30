@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { load } from "@/lib/store";
-import { MATERIAL_LABEL } from "@/lib/agents/rfq";
 import { usd } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -10,13 +9,15 @@ export default function Orders() {
   return (
     <div>
       <h2>Orders</h2>
-      <p className="lead">Confirmed orders. Open one to run the sourcing, production, documents and logistics agents for it.</p>
+      <p className="lead">Confirmed orders. Open one to run the procurement, documents and logistics agents for it.</p>
       <table>
-        <thead><tr><th>Order</th><th>Buyer</th><th>Product</th><th className="num">Qty (t)</th><th>Terms</th><th className="num">Value</th><th>Latest shipment</th><th>Status</th></tr></thead>
+        <thead><tr><th>Order</th><th>Buyer</th><th>Product</th><th className="num">Qty (t)</th><th>Terms</th><th className="num">Value</th><th className="num">Gross margin</th><th>Latest shipment</th><th>PO</th><th>Status</th></tr></thead>
         <tbody>
-          {s.orders.map((o) => (
-            <tr key={o.id}><td><Link href={`/orders/${o.id}`}>{o.id}</Link></td><td>{o.buyer}</td><td>{MATERIAL_LABEL[o.product]}</td><td className="num">{o.qtyT}</td><td>{o.incoterm} {o.destination}</td><td className="num">{usd(o.qtyT * o.priceUsdT)}</td><td>{o.deadline}</td><td>{o.status}</td></tr>
-          ))}
+          {s.orders.map((o) => {
+            const p = s.products.find((x) => x.id === o.productId);
+            const gm = p ? o.qtyT * (o.priceUsdT - p.supplierPriceUsdT) : 0;
+            return <tr key={o.id}><td><Link href={`/orders/${o.id}`}>{o.id}</Link></td><td>{o.buyer}</td><td>{p?.name}</td><td className="num">{o.qtyT}</td><td>{o.incoterm} {o.destination}</td><td className="num">{usd(o.qtyT * o.priceUsdT)}</td><td className="num">{usd(gm)}</td><td>{o.deadline}</td><td>{o.poStatus}</td><td>{o.status}</td></tr>;
+          })}
         </tbody>
       </table>
     </div>

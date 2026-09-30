@@ -1,5 +1,4 @@
 import type { Invoice, Order, Store } from "../types";
-import { allocate } from "./sourcing";
 
 const days = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
 
@@ -30,14 +29,14 @@ export function reminderDraft(r: Receivable) {
   ].filter((l) => l !== undefined).join("\n");
 }
 
-/** Cash needed to pay producers for orders in sourcing vs. cash already received as down payments. */
+/** What you must pay suppliers for open orders vs. the down payments received, and the margin you expect per order. */
 export function cashGap(s: Store) {
-  const rows = s.orders.filter((o) => ["confirmed", "sourcing"].includes(o.status)).map((o) => {
-    const dl = Math.max(days(s.today, o.deadline), 12);
-    const a = allocate(o.qtyT, o.product, dl, s.producers, s.settings);
-    const need = a.lines.reduce((x, l) => x + l.costUsd, 0) * (1 - s.settings.bufferPct / (100 + s.settings.bufferPct));
+  const rows = s.orders.filter((o) => ["confirmed", "sourcing", "production"].includes(o.status)).map((o) => {
+    const p = s.products.find((x) => x.id === o.productId);
+    const need = p ? o.qtyT * p.supplierPriceUsdT : 0;
     const dp = s.invoices.filter((i) => i.orderId === o.id && i.kind === "DP" && i.paid).reduce((x, i) => x + i.amountUsd, 0);
-    return { orderId: o.id, needUsd: Math.round(need), dpReceivedUsd: dp, gapUsd: Math.round(Math.max(0, need - dp)) };
+    const revenue = o.qtyT * o.priceUsdT;
+    return { orderId: o.id, needUsd: Math.round(need), dpReceivedUsd: dp, gapUsd: Math.round(Math.max(0, need - dp)), grossMarginUsd: Math.round(revenue - need), markupPct: need ? +(100 * (revenue - need) / need).toFixed(1) : 0 };
   });
   return { rows, totalGapUsd: rows.reduce((a, r) => a + r.gapUsd, 0) };
 }

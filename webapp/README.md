@@ -6,25 +6,28 @@ with your people. The agents read your data, compute, draft, and file *proposals
 
 | Agent | What it does for you |
 |---|---|
-| RFQ agent | Reads a buyer's e-mail/WhatsApp text, extracts product, quantity, port, terms, price, deadline; checks the MOQ; prices it; drafts the reply |
-| Sales agent | Turns an agreed quote into an order proposal (with down-payment invoice) |
-| Sourcing agent | Splits an order across producers by price, quality, reliability, with a buffer and a max share per producer |
-| Production agent | For your own kilns: batches, kiln days, raw material to buy, ready date |
+| Lead finder | Imports importer/distributor lists (LinkedIn Sales Navigator exports, trade data), discovers more through a web-search API, checks the legal entity in GLEIF, scans public websites, scores and ranks leads (tier A/B/C with visible reasons), drafts a 3-message outreach sequence |
+| RFQ agent | Reads a buyer's e-mail/WhatsApp text, extracts grade, quantity, port, terms, price, deadline; checks the MOQ; prices it with your list price and markup; drafts the reply |
+| Negotiation agent | Capped concessions: holds list price first, never goes below your floor (min markup or max discount, whichever is tighter) |
+| Sales agent | Turns an agreed quote into an order proposal with a down-payment invoice |
+| Procurement agent | Picks the supplier (primary, else backup) by lead time and monthly capacity, drafts the purchase order, tracks supplier confirmation |
 | Documents agent | HS code suggestion, document checklist by destination, invoice and packing-list drafts |
 | Logistics agent | Closing-date / roll-over risk per shipment, missing documents |
-| Finance agent | Unpaid invoices, reminder drafts, cash needed for producers vs. down payments |
-| Marketing agent | Suggests where to spend the weekly ad budget (Thompson sampling) and drafts content that only uses verified claims |
+| Finance agent | Unpaid invoices, reminder drafts, supplier payments vs. down payments, margin per order |
+| Marketing agent | Suggests where to spend the weekly ad budget (Thompson sampling), which product earns most per container, and drafts content that only uses verified claims |
 | Governance | Approval inbox, hash-chained audit log, daily briefing that ranks what needs attention |
+
+## Your business model in the app
+One or two suppliers per product, each able to fill a container. You earn a markup over the supplier price (defaults: coconut 10%, sawdust 7-10%, hardwood 25-40%) and negotiation is capped tightly. List prices are your September 2026 price sheet (FOB Central Java). **Supplier prices in the seed data are demo values**: enter the real ones in Products.
 
 ## Run locally
 ```
 cd webapp
 npm install
 npm run dev          # http://localhost:3000   (or: npm run build && npm start)
-npm test             # agent unit tests
+npm test             # agent unit tests (network calls are mocked)
 ```
-Data lives in `data/store.json` (created from demo seed data on first run; **demo numbers are illustrative, not real prices**).
-Edit producers and settings in the app, or reset from the Today page.
+Data lives in `data/store.json` (created from demo seed data on first run). Edit products, suppliers and settings in the app, or reset from the Today page.
 
 ## Deploy
 * **Docker (recommended, any VPS / Railway / Fly / Render)**: `docker build -t kraka-ops .` then
@@ -32,12 +35,15 @@ Edit producers and settings in the app, or reset from the Today page.
 * **Vercel / serverless**: the filesystem is read-only there. Replace `load()`/`save()` in `src/lib/store.ts` with a Postgres/KV client; the agents are pure functions and need no change.
 
 ## Environment variables (`.env.example`)
-* `APP_PASSWORD`: enables HTTP Basic auth for the whole app (user `admin`). Set it on any public deployment.
-* `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`): lets a language model polish replies and content. Optional: agents work without it. The model only rewrites text; numbers and claims come from the agents and the claims guardrail.
+* `APP_PASSWORD`: HTTP Basic auth for the whole app (user `admin`). Set it on any public deployment.
+* `BRAVE_SEARCH_API_KEY`: turns on web discovery in the Lead finder (public search results only; LinkedIn pages are never scraped).
+* `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`): lets a language model polish replies and content. The model only rewrites text; numbers and claims come from the agents and the claims guardrail.
 * `DATA_FILE`: path of the JSON data file.
 
 ## Honest limits
-* Agents propose; they do not send e-mail/WhatsApp, buy ads, or move money. Sending is manual (copy the draft) until you connect an integration.
+* Agents propose; they do not send e-mail/WhatsApp/LinkedIn messages, buy ads, or move money. You copy the approved drafts.
+* Lead discovery, GLEIF checks and website scans need internet access on the server. They are unit-tested with mocked responses; they were not exercised against the live services in the build sandbox (no outbound access there).
+* LinkedIn: use Sales Navigator exports or paste. Automated scraping breaks LinkedIn's terms. B2B outreach must follow local rules (opt-out line is included; EU/GDPR: keep the source and a reason for storing each contact).
+* GLEIF only covers entities that have an LEI; many small importers do not. "Not found" is a prompt to check the national company registry, not a red flag.
 * Document checklists, HS codes and country requirements are starting points: confirm with your buyer, forwarder and customs broker.
-* Sourcing assumes only ~77.5% of a producer's stated capacity is really free and a pass rate of 0.75 + 0.2 x quality; replace with your measured numbers.
 * Single-user, single-file store. Add a database and per-user login before multiple people use it.
