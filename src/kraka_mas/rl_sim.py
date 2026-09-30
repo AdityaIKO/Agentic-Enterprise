@@ -18,7 +18,7 @@ def train_in_sim(models, n_scenarios=3000, gamma=0.97, alpha_min=0.02, eps0=0.6,
     for k in range(n_scenarios):
         eps = max(eps_min, eps0 * (1 - k / (0.7 * n_scenarios)))
         m = dict(models); m["Q"] = Q
-        sc = make_scenario(seed0 + k, profile=("xpora", "kraka")[k % 2])       # alternate commodity profiles
+        sc = make_scenario(seed0 + k, profile="kraka")
         s = Sim(sc, "mas", m, dict(expedite="qtrain", eps=eps))
         res = s.run()
         for r in s.orders:

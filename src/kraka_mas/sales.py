@@ -1,6 +1,6 @@
-"""Sales / Virtual-SDR module (Xpora pillar 1): RFQ response time, buyer patience and price negotiation.
+"""Sales / Virtual-SDR module (sales pillar): RFQ response time, buyer patience and price negotiation.
 
-EXPLORATORY: the response-time and patience distributions are ASSUMPTIONS (no Xpora sales data yet); the negotiation maths is the
+EXPLORATORY: the response-time and patience distributions are ASSUMPTIONS (no KrakaCoal RFQ log used); the negotiation maths is the
 lecture's (Ch.4 time-dependent concession, Nash bargaining).  Guardrails (governance): the SDR may issue a Letter of Intent only above
 the price floor and inside a discount band; anything else is escalated to the human owner.
 

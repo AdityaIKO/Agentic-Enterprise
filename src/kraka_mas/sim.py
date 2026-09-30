@@ -139,7 +139,7 @@ class Sim:
             r.src_cost = rr["cost"] + rr["waste"]
             r.human_touches += rr["touches"] + 1                    # +1 = admin verifies the down payment by hand (all modes)
             if mode != "static":
-                self.levels[2] += 1                                 # DP verification = level 2 (human-in-the-loop, by Xpora design)
+                self.levels[2] += 1                                 # DP verification = level 2 (human-in-the-loop, by design)
 
     # ---------------------------------------------------------------- setup
     def _register_agents(self):

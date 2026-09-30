@@ -1,5 +1,5 @@
-"""All tunable parameters.  Xpora is a real venture, but every number marked ASSUMPTION below is a modelling choice
-(the pilot has not shipped yet), and all operational data is synthetic.  Numbers taken from the Xpora submission are marked SOURCE."""
+"""All tunable parameters.  KrakaCoal is a real charcoal export business, but every number marked ASSUMPTION below is a modelling choice
+(prices and payment terms are not published), and all operational data is synthetic.  Numbers taken from the KrakaCoal site are marked SOURCE."""
 from dataclasses import dataclass
 
 DT = 0.05                                   # simulation time step (day)

@@ -1,4 +1,4 @@
-"""Run all experiments -> outputs/results.json (+ CSV).   python -m xpora_mas.experiments   (from src/)"""
+"""Run all experiments -> outputs/results.json (+ CSV).   python -m kraka_mas.experiments   (from src/)"""
 import csv, json, multiprocessing as mp, pathlib, sys, time
 import numpy as np
 
@@ -123,7 +123,7 @@ def per_profile(R, profile, seeds, fast):
     out["buffer"] = {}
     for b in (0.0, 0.05, 0.10, 0.15, 0.20, 0.30):
         out["buffer"][str(b)] = agg(R.batch(profile, sd, "mas", dict(buffer_first=b)), ["otif", "fill", "margin", "surplus_waste", "sourcing"])
-    if profile == "xpora":
+    if True:
         pf = PROFILES[profile]
         out["scale"] = []
         for f in ((1, 1), (4, 4), (10, 10), (20, 20)) if not fast else ((1, 1), (4, 4), (10, 10)):
@@ -146,7 +146,7 @@ def main(fast=False):
     seeds = list(EVAL_SEEDS)[: (60 if fast else 300)]
     res["n_scenarios"] = len(seeds)
     allrows = []
-    for pf in ("xpora", "kraka"):
+    for pf in ("kraka",):
         r = per_profile(R, pf, seeds, fast)
         allrows += r.pop("_rows")
         res["profiles"][pf] = r

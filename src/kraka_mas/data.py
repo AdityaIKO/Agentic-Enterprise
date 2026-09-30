@@ -1,11 +1,11 @@
-"""Synthetic data for the Xpora consortium: HS product descriptions, carrier roll-over history and export scenarios."""
+"""Synthetic data for the KrakaCoal consortium: HS product descriptions, carrier roll-over history and export scenarios."""
 from dataclasses import dataclass, field
 import numpy as np
 
 from . import config as C
 
 # ------------------------------------------------------------------ HS product descriptions
-# 4-digit HS headings of commodities in Xpora's expansion plan (illustrative; NOT a legal customs ruling)
+# 4-digit HS headings of export commodities (charcoal 4402 plus other Indonesian exports used to make the classifier non-trivial (illustrative; NOT a legal customs ruling)
 HS_HEADINGS = {
     "2106": ("Food preparations n.e.s. (tempe, processed foods)", ["frozen tempe", "vacuum packed tempe", "tempe block", "fermented soybean cake", "tempe slices", "tempe patties"]),
     "0901": ("Coffee", ["green coffee beans", "arabica beans", "robusta beans", "roasted coffee", "coffee cherries dried"]),
@@ -150,7 +150,7 @@ def next_closing(t: float, offset: float, interval: float = C.VESSEL_INTERVAL) -
     return float(offset + max(k, 0) * interval)
 
 
-def make_scenario(seed: int, profile="xpora", n_orders=None, n_producers=None, machines_per_wc: int = C.MACHINES_PER_WC,
+def make_scenario(seed: int, profile="kraka", n_orders=None, n_producers=None, machines_per_wc: int = C.MACHINES_PER_WC,
                   p_coord_out: float = 0.0, tight: float = 1.6, avail_low: float = C.AVAIL_LOW,
                   reg_noise: float = C.REG_CAP_NOISE) -> Scenario:
     from .profiles import PROFILES

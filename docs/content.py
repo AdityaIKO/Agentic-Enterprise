@@ -4,9 +4,9 @@ import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from xpora_mas import config as C
-from xpora_mas.data import make_scenario
-from xpora_mas.profiles import PROFILES
+from kraka_mas import config as C
+from kraka_mas.data import make_scenario
+from kraka_mas.profiles import PROFILES
 
 R = json.loads((ROOT / "outputs/results.json").read_text())
 W = json.loads((ROOT / "outputs/worked_example.json").read_text())
@@ -14,8 +14,8 @@ FIGDIR = ROOT / "outputs/figures"
 
 NAMA, NIM = "Aditya Wahyu Wijanarko", "25/574566/PPA/07251"
 REPO = "https://github.com/AdityaIKO/Agentic-Enterprise"
-TITLE = "XCMAS: Xpora Consortium Multi-Agent System"
-SUBTITLE = "Sistem multi-agen cerdas untuk konsolidasi ekspor UMKM (pilot tempe Jawa Tengah), dikalibrasi dengan operasi trading KrakaCoal"
+TITLE = "KCMAS: Sistem Multi-Agen untuk Konsolidasi dan Ekspor Arang (KrakaCoal)"
+SUBTITLE = "Sistem agen cerdas yang mengubah permintaan pembeli menjadi kontainer arang yang terisi penuh dan berangkat tepat waktu, dari puluhan produsen kecil"
 COURSE = "Agentic Enterprise (AI Agentic Technology Systems for Digital Enterprise Ecosystem) - Magister AI, Universitas Gadjah Mada"
 
 
@@ -29,15 +29,15 @@ usd = lambda x: "$" + n(x, 0, "", True)
 pc = lambda x, nd=1: n(100 * x, nd) + "%"
 def ci(t, f=lambda x: n(x, 2)): return f"{f(t[0])} [{f(t[1])}; {f(t[2])}]"
 
-P = R["profiles"]; XP, KR = P["xpora"], P["kraka"]
-PFX, PFK = PROFILES["xpora"], PROFILES["kraka"]
+P = R["profiles"]; KR = P["kraka"]; XP = KR
+PFK = PROFILES["kraka"]
 MODES = ("static", "central", "mas")
 def mv(pf, mode, key, i=0): return P[pf]["main"][mode][key][i]
 def per_order(pf, mode, key): return mv(pf, mode, key) / PROFILES[pf].n_orders
 
 # headline numbers
 h = {}
-for pf in ("xpora", "kraka"):
+for pf in ("kraka",):
     h[pf] = dict(otif_s=mv(pf, "static", "otif"), otif_m=mv(pf, "mas", "otif"), otif_c=mv(pf, "central", "otif"),
                  fill_s=mv(pf, "static", "fill"), fill_m=mv(pf, "mas", "fill"), fill_c=mv(pf, "central", "fill"),
                  otd_s=mv(pf, "static", "otd"), otd_m=mv(pf, "mas", "otd"),
@@ -46,103 +46,94 @@ for pf in ("xpora", "kraka"):
 
 # ============================================================ front matter
 EXEC = [
-    "Xpora adalah ekosistem ekspor Done-For-You untuk UMKM Indonesia: mengagregasi kapasitas produsen mikro (mis. produsen tempe 100-300 kg/hari) agar memenuhi MOQ pembeli global (15-27 ton per kontainer), "
-    "dengan satu payung legalitas dan quality control terpusat. KrakaCoal adalah bisnis trading arang milik penulis yang sudah berjalan dengan pola serupa: jaringan produsen di Sumatra, Jawa, dan Sulawesi, MOQ satu FCL, ekspor dari Surabaya.",
-    "Masalah agentik yang dipecahkan: bagaimana mengubah RFQ pembeli menjadi kontainer yang terisi penuh dan berangkat tepat waktu ketika pasokan tersebar pada puluhan produsen kecil yang kapasitas nyatanya berubah-ubah, "
-    "kadang gagal kirim, dan sebagian barangnya ditolak QC. XCMAS memodelkannya sebagai sistem multi-agen: Sales Agent (Virtual SDR), Order Agent, Producer Agent (UMKM), QC, Warehouse Line, Compliance, Risk, Freight, Learning, Governance, dan Scout mobile.",
-    f"Hasil simulasi ({R['n_scenarios']} skenario berpasangan per profil, seluruh data sintetis): pada profil Xpora (tempe, cold chain) pengiriman tepat waktu dan terisi penuh (OTIF) naik dari {pc(h['xpora']['otif_s'])} (admin manual via WhatsApp) menjadi {pc(h['xpora']['otif_m'])}, "
-    f"margin kontribusi per order dari {usd(h['xpora']['mar_s'])} menjadi {usd(h['xpora']['mar_m'])}; pada profil KrakaCoal (arang, kontainer kering) OTIF {pc(h['kraka']['otif_s'])} menjadi {pc(h['kraka']['otif_m'])} dan margin per order {usd(h['kraka']['mar_s'])} menjadi {usd(h['kraka']['mar_m'])}. "
-    f"Sentuhan manusia per order turun dari {n(h['xpora']['t_s'],0)} menjadi {n(h['xpora']['t_m'],1)} (Xpora).",
-    "Temuan yang jujur: (1) Keunggulan multi-agen atas agen tunggal terpusat berasal dari informasi lokal yang segar (produsen menawar dengan kapasitas nyata hari itu) versus registry yang kedaluwarsa; keunggulan itu hilang bila kapasitas stabil dan registry akurat, sehingga agen tunggal cukup untuk konsorsium kecil yang stabil. "
-    "(2) Multi-agen memakai lebih banyak pesan per order pada pemasokan tetapi lebih ringan pada node puncak dan lebih tahan gangguan koordinator. (3) Over-allocation 15% adalah trade-off antara kekurangan pasokan dan limbah surplus. "
-    "(4) Q-learning yang dilatih di lingkungan abstrak tidak transfer; yang dilatih di simulator setara aturan yang dituning. (5) Modul Sales/SDR bersifat eksploratif dan bergantung asumsi. "
-    "(6) Data bersifat sintetis; pilot Xpora belum berjalan dan syarat pembayaran KrakaCoal tidak dipublikasikan sehingga tidak dimodelkan (hanya asumsi DP).",
+    "KrakaCoal (krakacoal.com) adalah bisnis ekspor arang yang sudah berjalan: jaringan produsen (bukan satu pabrik) di Sumatra, Jawa, dan Sulawesi, karbonisasi di Jawa, uji lab tiap batch, ekspor dari Surabaya, "
+    "kapasitas 300+ ton per bulan dan 10+ kontainer per bulan, dengan MOQ satu kontainer penuh (12-17 ton untuk 20 ft, 25-27 ton untuk 40 ft). Penulis bekerja sebagai trader pada bisnis ini.",
+    "Masalah yang dipecahkan: bagaimana mengubah satu permintaan pembeli (RFQ) menjadi kontainer yang terisi penuh dan berangkat tepat waktu ketika pasokan tersebar pada puluhan produsen yang kapasitas nyatanya berubah-ubah, "
+    "kadang gagal kirim, dan sebagian barangnya tidak lolos uji mutu. Sistem KCMAS memecahnya menjadi peran-peran perangkat lunak (agen): Marketing & Ads, Sales, Order, Producer, QC, Warehouse, Compliance, Risk, Freight, Learning, Governance, dan Scout. "
+    "Semua agen adalah program; pekerjaan fisik tetap dilakukan produsen, staf, dan mesin gudang.",
+    f"Hasil simulasi ({R['n_scenarios']} skenario, seluruh data sintetis): persentase order yang berangkat tepat waktu dan terisi penuh (OTIF) naik dari {pc(h['kraka']['otif_s'])} pada proses manual (admin via WhatsApp) menjadi {pc(h['kraka']['otif_m'])} pada multi-agen; "
+    f"margin per order dari {usd(h['kraka']['mar_s'])} menjadi {usd(h['kraka']['mar_m'])}; sentuhan manusia per order dari {n(h['kraka']['t_s'],0)} menjadi {n(h['kraka']['t_m'],1)}.",
+    "Temuan yang jujur: (1) keunggulan multi-agen atas agen tunggal terpusat kecil dan berasal dari informasi lokal yang segar (produsen menawar dengan kapasitas nyata hari itu, bukan data pendaftaran yang usang); bila data pusat akurat, agen tunggal setara. "
+    "(2) Multi-agen memakai lebih banyak pesan pada tahap pemasokan tetapi beban per node lebih ringan. (3) Kelebihan pesanan (buffer) sekitar 15% adalah kompromi antara kekurangan pasokan dan limbah. "
+    "(4) Modul Sales dan Marketing bersifat eksploratif dan bergantung asumsi. (5) Data sintetis; syarat pembayaran dan harga KrakaCoal tidak dipublikasikan sehingga menjadi asumsi.",
 ]
+METRIK_DEF = [["Istilah pada tabel", "Artinya"],
+    ["OTIF (On Time In Full)", "Persentase order yang berangkat paling lambat pada tanggal batas kirim (LSD) DAN jumlah kg yang lolos uji mutu minimal 98% dari yang dipesan. Ini ukuran utama."],
+    ["Tepat waktu", "Persentase order yang berangkat sebelum LSD, tanpa memperhitungkan kelengkapan."],
+    ["Fill rate", "Rata-rata (kg yang lolos uji mutu dibagi kg yang dipesan) per order."],
+    ["Margin per order", "Pendapatan dikurangi semua biaya (bahan dari produsen, freight, denda keterlambatan, penyimpanan, lembur, biaya waktu manusia, limbah surplus), rata-rata per order, dalam USD."],
+    ["Sentuhan manusia", "Berapa kali seseorang harus turun tangan per order (mengirim pesan, memverifikasi, memeriksa)."],
+    ["Angka dalam tabel", f"Rata-rata dari {R['n_scenarios']} skenario simulasi yang sama untuk ketiga sistem; [a; b] adalah rentang kepercayaan 95%."]]
 
 TUGAS_MAP = [
-    ("Gunakan topik yang dipilih", "Topik: XCMAS, sistem multi-agen konsolidasi ekspor UMKM (venture Xpora; kalibrasi KrakaCoal). Tidak diambil kelompok 1-6.", "Bagian 1, 2"),
+    ("Gunakan topik yang dipilih", "Topik: KCMAS, sistem multi-agen untuk konsolidasi dan ekspor arang (KrakaCoal). Tidak diambil kelompok 1-6.", "Bagian 1, 2"),
     ("Upload laporan progres", "Dokumen ini (PDF) + slide (PPTX) + kode GitHub", "-"),
-    ("Peran anggota tim", "Pengerjaan individu; enam peran template Project #1 dipegang satu orang", "Bagian 1"),
-    ("Deskripsi problem", "MOQ trap, legalitas, kualitas, alokasi kuota; KPI, klasifikasi lingkungan, PEAS", "Bagian 2"),
+    ("Peran anggota tim", "Pengerjaan individu (tidak ada tim)", "Bagian 1"),
+    ("Deskripsi problem", "MOQ, mutu, kuota produsen, pemasaran dan penjualan; KPI, klasifikasi lingkungan, PEAS", "Bagian 2"),
     ("Tiga penelitian topik serupa dan SOTA", "Hathikal 2020; Lee 2024; Ivanov & Dolgui 2021 (+11 referensi, semua ber-DOI, jurnal Q1-Q3)", "Bagian 3"),
     ("Tujuan proyek", "Tujuan umum, enam tujuan khusus terukur, empat hipotesis", "Bagian 4"),
-    ("Diagram rencana sistem dan alur", "Arsitektur, alur end-to-end 14 langkah, Contract Net, siklus BDI", "Bagian 5.1"),
-    ("Komponen internal tiap agen; AI/ML/DL dan alasannya", "Tabel 11 agen; portofolio metode dan alasan", "Bagian 5.2"),
+    ("Diagram rencana sistem dan alur", "Arsitektur, alur end-to-end, Contract Net, siklus kerja agen, cuplikan simulasi", "Bagian 5.1"),
+    ("Komponen internal tiap agen; AI/ML/DL dan alasannya; peta agen ke kode", "Tabel 12 agen; portofolio metode dan alasan; berkas kode tiap agen", "Bagian 5.2"),
     ("Kontrak input, cognitive overload, jadwal dan approval, negosiasi", "Kontrak I/O pengguna, desain beban kognitif, SLA dan eskalasi, CNP, keamanan", "Bagian 5.3-5.6"),
     ("Mengapa single vs multi-agent; tiga penelitian agen cerdas", "Kriteria Bab 4 + bukti eksperimen; Smith 1980, Leitao 2009, Wang 2024", "Bagian 5.7, 3.2"),
-    ("Ilustrasi data dan perhitungan komputasi", "Sumber data (Xpora/KrakaCoal/asumsi), contoh hitung manual, simulasi penuh", "Bagian 6"),
-    ("Rumus notasi dan arti simbol", "30 rumus dikelompokkan A-H, tiap simbol dijelaskan", "Bagian 7"),
+    ("Ilustrasi data dan perhitungan komputasi", "Sumber data (situs KrakaCoal/asumsi), contoh hitung dengan angka, cuplikan simulasi", "Bagian 6"),
 ]
-ROLES = [
-    ("Leader / product owner", "Memilih topik dari venture sendiri (Xpora, KrakaCoal), merumuskan masalah dan KPI."),
-    ("Researcher", "Studi literatur (3 + 3), memetakan materi Bab 1-5 ke desain, mengumpulkan parameter dari submission Xpora dan situs KrakaCoal."),
-    ("Programmer", "Simulator, agen, model ML/RL, lapisan pesan aman, unit test."),
-    ("Designer", "Arsitektur sistem, protokol Contract Net, diagram, visualisasi."),
-    ("Evaluator", "Eksperimen berpasangan pada dua profil komoditas, ablation, sensitivitas, uji ketahanan dan skala, catatan validitas."),
-    ("Presenter", "Menyusun laporan PDF dan slide PPT."),
-]
-ROLE_NOTE = ("Tugas 1 dikerjakan individu (penulis bergabung terlambat ke kelas), sehingga enam peran pada template Project #1 dipegang satu orang. Kasus berangkat dari venture Xpora (tim PIDI 2026) dan bisnis trading KrakaCoal milik penulis; "
-             "bagian yang dinilai di sini (model agentik, simulasi, dan analisis) dikerjakan penulis. Claude Code dipakai sebagai asisten penulisan kode dan dokumen; keputusan desain, angka, dan klaim ditinjau oleh penulis. "
-             "Modul CNN QC dan portal Virtual SDR pada Xpora dikembangkan anggota tim lain dan hanya dimodelkan secara statistik di sini.")
 
 # ============================================================ problem
 PROBLEM = [
-    "Xpora (submission ke-2 PIDI 2026) menargetkan tiga hambatan struktural ekspor UMKM: (1) fragmentasi kapasitas: pembeli mensyaratkan 15-27 ton per kontainer sementara produsen tempe rumahan hanya 100-300 kg/hari (The MOQ Trap); "
-    "(2) kemacetan legalitas dan kualitas: hanya 18,6% UMKM memiliki NIB dan 7,8% bersertifikasi produk, mutu tidak konsisten; (3) ilusi literasi digital: komunikasi akar rumput bertumpu pada WhatsApp.",
-    "Xpora menjawab dengan lima tahap: inbound negosiasi (Virtual SDR), validasi DP oleh admin (human-in-the-loop), distribusi kuota ke puluhan UMKM via WhatsApp (DP menjadi modal kerja), fulfillment dan QC (CV, Grade A/B/Reject) di gudang konsolidasi, lalu pelunasan dan ekspor di bawah satu PT konsorsium. "
-    "Tahap yang paling agentik dan paling rawan adalah distribusi kuota dan pemenuhan: kapasitas nyata produsen berubah-ubah, sebagian gagal kirim, dan sebagian barang ditolak QC.",
-    "KrakaCoal (situs krakacoal.com, PT. Kraka Coal Indonesia) adalah bisnis trading yang sudah berjalan: 'a vetted export network, not a single factory'. Mengumpulkan bahan dari Sumatra, Jawa, dan Sulawesi, karbonisasi di Jawa, uji lab tiap batch, kapasitas 300+ MT/bulan dan 10+ kontainer/bulan, "
-    "ekspor dari pelabuhan Jawa Timur (Surabaya). MOQ satu FCL (20 ft: 12-17 ton, 40 ft: 25-27 ton), produksi 10 hari (20 ft) atau 14 hari (40 ft), packing 3-6 hari, FOB default dan CIF atas permintaan. Pola ini identik dengan konsorsium Xpora, hanya komoditasnya tidak perishable.",
-    "Pernyataan masalah formal: untuk tiap order kontainer, pilih kuota tiap produsen (dengan buffer dan re-kontrak), jadwal lini gudang, dokumen/HS, carrier, dan tindakan pemulihan yang memaksimalkan margin kontribusi M = pendapatan (nilai x fill x (1 - diskon shelf-life)) - biaya total J, "
-    "dengan constraint kapasitas, closing kapal, batas konsentrasi produsen, kebijakan compliance, dan batas wewenang agen.",
+    "KrakaCoal (situs krakacoal.com, PT. Kraka Coal Indonesia) menjual arang (batok kelapa, kayu keras, serbuk gergaji) ke pembeli luar negeri. Situsnya menyebut 'a vetted export network, not a single factory': bahan dikumpulkan dari Sumatra, Jawa, dan Sulawesi, "
+    "dikarbonisasi di Jawa, diuji lab tiap batch, lalu diekspor dari pelabuhan Jawa Timur (Surabaya). MOQ satu kontainer penuh (20 ft: 12-17 ton, 40 ft: 25-27 ton), produksi 10 hari (20 ft) atau 14 hari (40 ft), packing 3-6 hari, FOB sebagai default dan CIF atas permintaan.",
+    "Karena tidak ada satu pabrik yang menghasilkan 25 ton dalam dua minggu, satu order harus digabung dari belasan produsen kecil. Di sinilah masalahnya: (1) kapasitas nyata tiap produsen berubah-ubah (dipakai pembeli lokal, cuaca, bahan baku) dan data pendaftaran cepat usang; "
+    "(2) sebagian produsen gagal kirim dan sebagian barang tidak lolos uji mutu (kadar air, abu, ukuran), sehingga kontainer tidak penuh; (3) dokumen ekspor dan klasifikasi HS sering baru diurus setelah barang siap sehingga kapal terlewat; (4) admin mengurus semuanya lewat WhatsApp satu per satu, sehingga lambat dan padat pekerjaan manusia.",
+    "Di sisi hulu, pembeli harus ditemukan dan dilayani: iklan digital, konten, dan listing marketplace menghasilkan calon pembeli; RFQ yang masuk harus dijawab cepat dan ditawar. Tanpa pemasaran yang terarah, kapasitas produsen menganggur; tanpa pengawasan kapasitas, iklan menjual barang yang tidak bisa dikirim tepat waktu.",
+    "Pernyataan masalah: untuk tiap order, tentukan produsen mana mengirim berapa (dengan cadangan dan re-kontrak bila gagal), jadwal lini gudang, dokumen dan kode HS, carrier, dan tindakan pemulihan, "
+    "sehingga margin per order maksimum dengan batasan kapasitas, batas kirim (LSD), maksimum 30% dari satu order per produsen, kebijakan compliance, dan batas wewenang tiap agen.",
 ]
 ENV_TABLE = [
     ["Karakteristik", "Klasifikasi", "Bukti pada kasus ini"],
     ["Observability", "Partially observable", "Kapasitas produsen hari ini (sisa setelah pasar lokal), keandalan, dan yield QC tidak diketahui pasti; registry hanya data onboarding"],
     ["Outcome", "Stochastic", "Gagal kirim produsen, reject QC, kerusakan lini gudang, roll-over kargo, dokumen kurang"],
     ["Change", "Dynamic", "Kapasitas berubah tiap order, jadwal kapal mingguan, kongesti pelabuhan, order baru masuk terus"],
-    ["Actors", "Multi-agent", "Pembeli asing, puluhan UMKM, carrier, bea cukai, admin konsorsium: pemilik dan kepentingan berbeda"],
+    ["Actors", "Multi-agent", "Pembeli asing, puluhan produsen, carrier, bea cukai, admin: pemilik dan kepentingan berbeda"],
 ]
 PEAS = [
     ["Komponen", "Deskripsi XCMAS"],
     ["Performance", "OTIF (tepat waktu dan terisi >= 98%); margin kontribusi per order; fill rate; rata-rata hari terlambat; tingkat reject dan surplus; sentuhan manusia; keadilan kuota antar UMKM (Jain); ketahanan dan beban node"],
-    ["Environment", "Pasar pembeli global; 30-40 produsen UMKM (WhatsApp); gudang konsolidasi 3 lini x 2; proses dokumen ekspor dan bea cukai; 3 carrier dengan jadwal kapal mingguan; kongesti pelabuhan"],
-    ["Actuators", "Broadcast CFP dan pemberian kuota via WhatsApp/bus; penjadwalan lini; lembur; booking carrier; penerbitan dokumen; eskalasi ke manusia; pembaruan quality score dan trust"],
-    ["Sensors", "Balasan/bid produsen; hasil QC (CV/lab); sensor kesehatan mesin; jadwal kapal via Scout Agent; status pelabuhan; hasil pengiriman; RFQ masuk"],
+    ["Environment", "Pasar pembeli global dan kanal iklan; 30 produsen arang (WhatsApp); gudang konsolidasi 3 tahap x 2 mesin; dokumen ekspor dan bea cukai; 3 carrier dengan jadwal kapal mingguan; kongesti pelabuhan"],
+    ["Actuators", "Membuat dan mengatur iklan dan konten; broadcast CFP dan pemberian kuota via WhatsApp/bus; penjadwalan lini; lembur; booking carrier; penerbitan dokumen; eskalasi ke manusia; pembaruan quality score dan trust"],
+    ["Sensors", "Klik dan RFQ dari tiap kanal iklan; balasan/bid produsen; hasil QC (CV/lab); sensor kesehatan mesin; jadwal kapal via Scout Agent; status pelabuhan; hasil pengiriman; RFQ masuk"],
 ]
-SOTA = ("Posisi terhadap solusi yang ada. Platform ekspor digital (Inaexport, MadeinIndonesia.com) berpola katalog do-it-yourself: UMKM tunggal sulit memenuhi 15-27 ton, mengurus legalitas sendiri (Rp 50-200 juta), dan QC self-reported (tabel pembanding pada submission Xpora). "
-        "Suite ERP/APS, TMS, dan Global Trade Management (mis. SAP GTS, Oracle GTM) kuat pada transaksi dan kepatuhan tetapi berbasis aturan/batch dan tidak menegosiasikan kuota dengan ratusan produsen kecil lewat WhatsApp. "
-        "XCMAS adalah lapisan keputusan agentik di atas kanal yang sudah dipakai UMKM; ia tidak menggantikan ERP/TMS.")
+SOTA = ("Posisi terhadap solusi yang ada. Marketplace B2B (mis. Alibaba, Global Sources) dan portal ekspor mempertemukan pembeli dan penjual tetapi tidak memastikan satu penjual sanggup memenuhi 25 ton tepat waktu. "
+        "Suite ERP/APS, TMS, dan Global Trade Management (mis. SAP GTS, Oracle GTM) kuat pada transaksi dan kepatuhan tetapi berbasis aturan dan batch, dan tidak menegosiasikan kuota dengan puluhan produsen kecil lewat WhatsApp. "
+        "KCMAS adalah lapisan keputusan agentik di atas kanal yang sudah dipakai (WhatsApp, e-mail, marketplace); ia tidak menggantikan ERP atau TMS.")
 
 # ============================================================ data & assumptions
-PROFILE_TABLE = [["Parameter", "Xpora (tempe)", "KrakaCoal (arang)", "Sumber"],
-    ["Produsen di pool", f"{PFX.n_producers}", f"{PFK.n_producers}", "Xpora: pilot >= 20, target 200 (SOURCE); Kraka: setara 300+ MT/bln (SOURCE)"],
-    ["Kapasitas produsen (kg/hari)", f"{PFX.cap_mean:.0f} (100-320)", f"{PFK.cap_mean:.0f} ({PFK.cap_min:.0f}-{PFK.cap_max:.0f})", "Xpora: 100-300, rata-rata 250 (SOURCE); Kraka: ASUMSI dikalibrasi ke 300+ MT/bln"],
-    ["Ukuran order (kontainer)", "15-27 t", "12, 15, 17 t (20 ft) atau 25, 27 t (40 ft)", "Xpora: 15-27 t (SOURCE); Kraka: situs (SOURCE)"],
-    ["Harga kontrak (USD/kg)", "3,15 (medium), 4,5 (premium)", "1,10 dan 1,45", "Xpora: pita harga portal (SOURCE); Kraka: harga tidak dipublikasikan, ASUMSI"],
-    ["Fermentasi/karbonisasi + transport", f"{PFX.lag_days+PFX.transport_days:.2f} hari", f"{PFK.lag_days+PFK.transport_days:.0f} hari", "ASUMSI (tempe 36-48 jam; arang karbonisasi + pendinginan)"],
-    ["Lini gudang (hari per 20 t)", "QC-CV 0,9 / vakum 1,8 / beku 1,4", "Lab 1,5 / packing 4,0 / stuffing 1,0", "Kraka: packing 3-6 hari (SOURCE); lainnya ASUMSI"],
-    ["Waktu produksi total", "-", "10 hari (20 ft) - 14 hari (40 ft)", "Kraka (SOURCE); dipakai untuk kalibrasi sourcing"],
-    ["Perishable / shelf life", "ya, 45 hari (uji tim: 1-2 bulan)", "tidak", "Xpora uji vakum (SOURCE)"],
-    ["Tipe kontainer", "reefer", f"kering (tarif x {PFK.rate_factor})", "ASUMSI tarif"],
-    ["Incoterm", "-", "FOB default, CIF atas permintaan", "Kraka (SOURCE); model memakai closing/keberangkatan kapal"],
-    ["Jaminan dokumen", "HS, NIB, HACCP/BPOM/Halal", "COA, MSDS, lab test, SABER/ESMA, EUDR, Halal", "Xpora dan Kraka (SOURCE)"],
-    ["Syarat pembayaran", "DP buyer sebagai modal kerja (40% ASUMSI)", "tidak dipublikasikan pada situs", "Belum ada data: perlu diisi penulis"],
+PROFILE_TABLE = [["Parameter", "Nilai pada model", "Sumber"],
+    ["Produsen di pool", f"{PFK.n_producers}", "Setara 300+ ton per bulan (SOURCE: situs KrakaCoal); jumlah produsen ASUMSI"],
+    ["Kapasitas produsen (kg/hari)", f"rata-rata {PFK.cap_mean:.0f} (rentang {PFK.cap_min:.0f}-{PFK.cap_max:.0f})", "ASUMSI, dikalibrasi agar 300+ ton per bulan tercapai"],
+    ["Ukuran order (kontainer)", "12, 15, 17 ton (20 ft) atau 25, 27 ton (40 ft)", "SOURCE: situs KrakaCoal"],
+    ["Harga kontrak (USD/kg)", "1,10 (medium) dan 1,45 (premium)", "Harga tidak dipublikasikan: ASUMSI"],
+    ["Karbonisasi/pendinginan + transport ke gudang", f"{PFK.lag_days+PFK.transport_days:.0f} hari", "ASUMSI"],
+    ["Tahap gudang (hari per 20 ton)", "Uji lab dan sortir 1,5 / packing 4,0 / stuffing 1,0", "Packing 3-6 hari (SOURCE); lainnya ASUMSI"],
+    ["Waktu produksi total", "10 hari (20 ft) sampai 14 hari (40 ft)", "SOURCE: situs; dipakai untuk kalibrasi pemasokan"],
+    ["Tipe kontainer dan tarif", f"kering; tarif x {PFK.rate_factor} dari acuan reefer", "ASUMSI"],
+    ["Incoterm", "FOB default, CIF atas permintaan", "SOURCE: situs"],
+    ["Dokumen", "COA, MSDS, uji lab, SABER/ESMA, EUDR, Halal", "SOURCE: situs"],
+    ["Syarat pembayaran", "DP 40% sebagai contoh", "Tidak dipublikasikan pada situs: ASUMSI, perlu diisi penulis"],
 ]
 ASSUME = [["Parameter", "Nilai", "Keterangan"],
     ["Ketersediaan kapasitas u", f"U({C.AVAIL_LOW}; 1)", "sisa kapasitas produsen setelah pasar lokal (ASUMSI); registry mengira rata-rata 0,775 dan kapasitas nominal berderau 10%"],
-    ["Waktu balas WhatsApp", f"median {C.REPLY_MEDIAN_H} jam, sigma {C.REPLY_SIGMA}", "lognormal; SLA target Xpora < 2 jam; bid lebih lambat dari 6 jam diabaikan"],
+    ["Waktu balas WhatsApp", f"median {C.REPLY_MEDIAN_H} jam, sigma {C.REPLY_SIGMA}", "lognormal; bid lebih lambat dari 6 jam diabaikan (ASUMSI)"],
     ["Buffer over-allocation", f"{pc(C.BUFFER_FIRST,0)} (awal), {pc(C.BUFFER_REPL,0)} (susulan)", "dipilih dari sweep pada seed kalibrasi; admin manual 5%"],
     ["Batas konsentrasi", pc(C.MAX_SHARE, 0), "tiap produsen maks 30% dari satu order; produsen dengan quality score < 0,60 diblokir"],
     ["Gagal kirim produsen", "1 - keandalan, keandalan U(0,80; 0,99)", "yield QC = 0,72 + 0,26 x keandalan + derau; premium butuh yield >= 0,85 (Grade A)"],
     ["Surplus", f"dijual lokal {pc(C.SALVAGE,0)} harga beli", "biaya limbah = 40% harga beli untuk kg surplus"],
     ["Lini gudang", f"{C.MACHINES_PER_WC} mesin/tahap; kerusakan {C.BREAKDOWN_RATE}/hari", f"lembur x{C.OVERTIME_SPEEDUP}, {C.OVERTIME_COST_PER_DAY:.0f} USD per hari operasi; anggaran 12 tahap per skenario"],
     ["Penalti keterlambatan", "0,4% nilai/hari + 45 USD/hari (+5% bila > 10 hari)", "ASUMSI; L/C basi dan reputasi tidak dimodelkan"],
-    ["Verifikasi DP", f"{C.DP_VERIFY_DAYS[0]}-{C.DP_VERIFY_DAYS[1]} hari, oleh admin", "SOURCE: human-in-the-loop yang disengaja oleh Xpora; berlaku pada semua mode"],
+    ["Verifikasi DP", f"{C.DP_VERIFY_DAYS[0]}-{C.DP_VERIFY_DAYS[1]} hari, oleh admin", "Rancangan: manusia memverifikasi uang masuk (human-in-the-loop); berlaku pada semua mode"],
     ["Respons sales", f"manual median {C.HUMAN_SALES_MEDIAN_DAYS} hari; SDR {C.SDR_DAYS} hari", "ASUMSI (zona waktu dan jam kantor)"],
 ]
-ASSUME_NOTE = ("Seluruh parameter bertanda ASUMSI adalah pilihan pemodelan penulis; pilot Xpora belum mengirim dan syarat pembayaran KrakaCoal tidak dipublikasikan. "
-               "Catatan pada submission Xpora: PO 27 ton bernilai 'USD 6.000-8.000' setara USD 0,22-0,30/kg, jauh di bawah pita harga portal USD 2,8-8/kg; simulasi memakai pita harga portal. Mohon dikonfirmasi angka yang benar.")
+ASSUME_NOTE = ("Parameter bertanda ASUMSI adalah pilihan pemodelan penulis; harga dan syarat pembayaran KrakaCoal tidak dipublikasikan. Seluruh data operasional (kapasitas, gagal kirim, reject) sintetis.")
 
 def sample_orders(pf="kraka", seed=7):
     sc_ = make_scenario(seed, pf)
@@ -151,55 +142,45 @@ def sample_orders(pf="kraka", seed=7):
         rows.append([f"#{o.oid}", o.heading, f"{o.qty/1000:.0f} t" + (" premium" if o.premium else ""), f"{o.value:,.0f}".replace(",", "."), n(o.rfq, 1), n(o.dp_agent, 1), n(o.commit_closing, 0), n(o.lsd, 0)])
     return rows
 
-CARRIER_TABLE = [["Carrier (fiktif)", "Tarif/kontainer reefer", "Transit", "Offset closing", "Klaim keandalan", "P(roll-over) dasar"]] + [
+CARRIER_TABLE = [["Carrier (fiktif)", "Tarif acuan/kontainer", "Transit", "Offset closing", "Klaim keandalan", "P(roll-over) dasar"]] + [
     [c.name, usd(c.rate), f"{c.transit:.0f} hari", f"{c.offset:.0f} + 7k", n(c.advertised_rel, 2), n(1 / (1 + np.exp(-c.base_roll_logit)), 2)] for c in C.CARRIERS]
 
 # ============================================================ worked examples
 pdm, qct, ca, ro, co, tr, qo, ql, ng, mm, ot, sn = W["producers"], W["qc_trust"], W["carrier"], W["roll"], W["cos"], W["trust"], W["q_ours"], W["q_lecture"], W["nego"], W["mas_metrics"], W["order_trace"], W["sales_nego"]
 def _row(r): return f"{r['name']}: rate {n(r['rate'],0)} kg/hari, tawaran {n(r['offer'],0,'',True)} kg, harga {n(r['price'],2)}, q {n(r['q'],2)}, skor {n(r['score'],3)}"
 WORKED = [
-    ("1. Kebutuhan dengan buffer (over-allocation)",
-     f"Order 20 t (Q = 20.000 kg), buffer awal b = 15%: N_0 = 20.000 x 1,15 = 23.000 kg. Alasan: rata-rata sekitar 2 produsen per order gagal kirim dan ~6% kg ditolak QC; tanpa buffer OTIF turun (lihat sweep buffer, Bagian 8). "
-     "Putaran susulan hanya menutup kekurangan nyata: N_k = (Q - kg lolos QC) x 1,05."),
-    ("2. Alokasi kuota multi-agen (bid dengan kapasitas nyata)",
+    ("1. Kebutuhan dengan cadangan (buffer)",
+     "Order 25 ton. Sistem meminta 25 x 1,15 = 28,75 ton kepada produsen. Alasan: rata-rata sekitar dua produsen per order gagal kirim dan sekitar 6% kg tidak lolos uji mutu; tanpa cadangan OTIF turun tajam (lihat sweep buffer, Bagian 8). "
+     "Putaran susulan hanya menutup kekurangan nyata ditambah cadangan 5%."),
+    ("2. Pembagian kuota dengan tawaran kapasitas nyata",
      f"Lot {n(pdm['need'],0,'',True)} kg, jendela {pdm['window']:.0f} hari. Lima produsen menawar: " + "; ".join(_row(r) for r in pdm["rows"]) +
-     f". Skor s = 0,3(1 - harga~) + 0,5 q + 0,2 kecepatan~. Urutan: {' > '.join(pdm['ranked'])}. Kuota: " + ", ".join(f"{k} {n(v,0,'',True)} kg" for k, v in pdm["alloc"].items()) + "."),
-    ("3. Mengapa registry kedaluwarsa merugikan (agen tunggal)",
-     "Agen tunggal memakai kapasitas registry x ketersediaan rata-rata 0,775: " + ", ".join(f"{r['name']} {n(r['stale_offer'],0,'',True)} kg" for r in pdm["rows"]) +
-     f". Terhadap tawaran nyata di atas, kuota berikut melebihi kemampuan: " + ", ".join(f"{k} +{n(v,0,'',True)} kg" for k, v in pdm["cap_short"].items() if v > 0) +
-     f" (total {n(pdm['cap_short_total'],0,'',True)} kg) sehingga perlu putaran susulan setelah konfirmasi (+0,25 hari) dan lebih banyak pesan. Pada multi-agen kekurangan ini tidak muncul karena produsen menawar sebatas kapasitas nyata."),
-    ("4. QC dan pembaruan quality score",
-     f"Produsen mengirim {n(qct['delivered'],0,'',True)} kg dengan yield {n(qct['g'],2)}: lolos QC = {n(qct['passed_medium'],0,'',True)} kg. Untuk order premium dengan produsen yield < 0,85 hanya 55% yang Grade A: {n(qct['passed_premium_lowgrade'],0,'',True)} kg. "
-     f"Quality score q = 0,78 diperbarui q' = 0,8 x 0,78 + 0,2 x {n(qct['g'],2)} = {n(qct['q_ok'],3)}; bila gagal kirim (hasil 0): q' = {n(qct['q_default'],3)}; dua kali gagal: {n(qct['q_default_twice'],3)} < 0,60 sehingga diblokir."),
-    ("5. Dispatch lini gudang (critical ratio)",
-     f"t = {n(W['cr']['t'],0)}: J1 tenggat 12,5 sisa 3,2; J2 10,5 dan 4,0; J3 9,0 dan 1,4. CR = (d - t)/W: J1 {n(W['cr']['cr']['J1'],2)}; J2 {n(W['cr']['cr']['J2'],3)}; J3 {n(W['cr']['cr']['J3'],2)}. Urutan {' > '.join(W['cr']['order'])}."),
-    ("6. Tawaran Contract Net antar lini",
-     f"Job w = 1,8 hari pada t = 5. Lini a: beban 2,4, kecepatan 1,02: ETA = {n(W['bids']['a'],2)}. Lini b: beban 0,9, kecepatan 0,97: ETA = {n(W['bids']['b'],2)} sehingga ACCEPT ke b. Bila b terindikasi rusak sampai t = 7,5: ETA b = {n(W['bids']['b_alerted'],2)} dan a menang."),
-    ("7. Pemilihan carrier: skor hibrida vs biaya harapan",
-     f"Order ${n(ca['value'],0,'',True)}, 1 kontainer kering, tiba gerbang t = {n(ca['tport'],1)}, LSD = {n(ca['lsd'],0)}. " +
-     "; ".join(f"{r['name']}: biaya {usd(r['cost'])}, berangkat hari {n(r['dep'],0)}, p = {n(r['p'],2)}, z = {n(r['z'],1)}, g = {n(r['g'],0)}, h = {n(r['h'],1)}, E[biaya] = {usd(r['exp_total'])}" for r in ca["rows"]) +
-     f". Hibrida memilih {ca['best_h']}; biaya-harapan murni memilih {ca['best_exp']}."),
-    ("8. Risiko roll-over (kebenaran tersembunyi vs model)",
-     f"{ro['carrier']}, kongesti 0,6, musim puncak, buffer 2 hari: logit = -1,55 + 1,8(0,6) + 1,1(1) - 0,3(2) = {n(ro['logit'],2)}; p = {n(ro['p'],3)}. Carrier tercepat pada kondisi sama p = {n(ro['p_prime'],3)}. Model Risk Agent memperkirakan p dari 4.000 pengiriman historis (AUC {n(R['risk']['auc'],2)})."),
-    ("9. Klasifikasi HS dengan kemiripan kosinus",
-     f"Query '{co['q']}'. Dokumen '{co['d1']}': cos = 3/(sqrt(3) x sqrt(4)) = {n(co['c1'],3)}. Dokumen '{co['d2']}': irisan 2 kata, cos = {n(co['c2'],3)}. Sistem sebenarnya memakai TF-IDF n-gram kata + karakter dan k-NN; confidence < 0,60 diserahkan ke manusia."),
-    ("10. Trust carrier",
-     f"T = 0,80, terangkut (q = 1): T' = {n(tr[0]['new'],2)}. Roll-over (q = 0,2): T' = {n(tr[1]['new'],2)}; roll-over kedua: {n(tr[2]['new'],3)} < 0,60 sehingga diblokir oleh gerbang g."),
-    ("11. Q-learning keputusan lembur",
-     f"Contoh kuliah: Q = 2,0; alpha = 0,2; r = 5; gamma = 0,9; max Q' = 4: target = {n(ql['target'],1)}, TD = {n(ql['td_error'],1)}, Q baru = {n(ql['q_new'],2)}. "
-     f"Contoh kita: Q(s, lembur) = {n(qo['q_old'],0)}; r = -45 x 1,4/1,35 = {n(qo['r'],1)}; max Q' = {n(qo['maxq'],0)}: target = {n(qo['target'],1)}; TD = {n(qo['td'],1)}; Q baru = {n(qo['q_new'],1)}."),
-    ("12. Negosiasi Sales Agent dan Nash bargaining",
-     f"Harga per kg: pembeli membuka 2,60 (batas 3,40), penjual membuka 4,20 (batas bawah 3,00), T = 4: " + "; ".join(f"ronde {t}: {n(b_,2)} vs {n(s_,2)}" for t, b_, s_ in sn['trace']) +
-     f". Sepakat pada {n(sn['price'],2)} USD/kg pada ronde {sn['round']}; surplus pembeli {n(sn['surplus_per_kg']['buyer'],2)} dan penjual {n(sn['surplus_per_kg']['seller'],2)} per kg. Nash product tertinggi pada tarif $2.100-$2.200 pada contoh tarif di modul negosiasi."),
-    ("13. Biaya dan margin satu order (KrakaCoal, skenario 7, order #1 dan #4)",
-     "; ".join(f"{'Manual' if m=='static' else 'Multi-agen'} order #{oid}: kuantitas {n(v['qty']/1000,0)} t, terisi {pc(v['fill'],0)}, {v['rounds']} putaran, {v['producers']} produsen, sourcing {usd(v['src_cost'])}, freight {usd(v['freight'])}, penalti {usd(v['penalty'])}, "
-               f"penyimpanan {usd(v['hold'])}, manusia {usd(v['human'])}, pendapatan {usd(v['revenue'])} (terlambat {n(v['late'],0)} hari)" for m in ("static", "mas") for oid, v in ot[m].items()) + "."),
-    ("14. Metrik sistem multi-agen (Bab 4)",
-     f"Speedup 1.000 task: 100 s vs 29 s pada 4 agen: S = {n(mm['speedup'][0],2)}, efisiensi {n(mm['speedup'][1],2)}. Redundansi 3 agen R = 0,9: R_sys = {n(mm['r_sys'],3)}. Biaya komunikasi satu pesan 8 KB pada 8 Mbps dan 20 ms: {n(mm['comm_ms'],1)} ms. "
-     f"Jain: kuota merata {n(mm['jain'][0],2)}; timpang (4,1,1,1) {n(mm['jain'][1],2)}. Jain kuota antar produsen pada simulasi: Xpora {n(mv('xpora','mas','jain_producers'),2)}, KrakaCoal {n(mv('kraka','mas','jain_producers'),2)}."),
-    ("15. Migrasi Scout Agent",
-     "Host dengan trust >= 0,80 dan risiko <= 0,20 boleh dimigrasi; host carrier A (trust 0,71, risiko 0,30) ditolak walau latensinya terbaik. "
-     f"Data yang dipindahkan per skenario: {n(XP['scout']['bytes']/1e6,1)} MB (scout) vs {n(XP['scout']['raw']/1e6,1)} MB (remote pull); penghematan {pc(1-XP['scout']['bytes']/XP['scout']['raw'],0)}."),
+     f". Skor menimbang harga (30%), mutu (50%), dan kecepatan (20%). Urutan: {' > '.join(pdm['ranked'])}. Kuota: " + ", ".join(f"{k} {n(v,0,'',True)} kg" for k, v in pdm["alloc"].items()) + "."),
+    ("3. Mengapa data pendaftaran yang usang merugikan (agen tunggal)",
+     "Agen tunggal memperkirakan kapasitas dari data pendaftaran: " + ", ".join(f"{r['name']} {n(r['stale_offer'],0,'',True)} kg" for r in pdm["rows"]) +
+     f". Dibanding tawaran nyata di atas, kuota berikut melebihi kemampuan: " + ", ".join(f"{k} +{n(v,0,'',True)} kg" for k, v in pdm["cap_short"].items() if v > 0) +
+     f" (total {n(pdm['cap_short_total'],0,'',True)} kg), sehingga perlu putaran susulan dan lebih banyak pesan. Pada multi-agen kekurangan ini tidak muncul karena produsen hanya menawar sebatas kapasitas nyata."),
+    ("4. Uji mutu dan skor mutu produsen",
+     f"Produsen mengirim {n(qct['delivered'],0,'',True)} kg dengan tingkat kelolosan {n(qct['g'],2)}: yang lolos = {n(qct['passed_medium'],0,'',True)} kg. Untuk order premium, produsen berkelolosan di bawah 0,85 hanya 55% yang Grade A: {n(qct['passed_premium_lowgrade'],0,'',True)} kg. "
+     f"Skor mutu produsen (mulai 0,78) diperbarui 80% dari skor lama ditambah 20% dari hasil terbaru: menjadi {n(qct['q_ok'],3)}; bila gagal kirim menjadi {n(qct['q_default'],3)}; gagal dua kali menjadi {n(qct['q_default_twice'],3)}, di bawah 0,60 sehingga produsen diblokir sementara."),
+    ("5. Urutan kerja di gudang",
+     f"Pada hari {n(W['cr']['t'],0)} ada tiga job. J1 tenggat 12,5 sisa kerja 3,2 hari; J2 tenggat 10,5 sisa 4,0; J3 tenggat 9,0 sisa 1,4. Sistem menghitung rasio sisa waktu terhadap sisa kerja (makin kecil makin mendesak): J1 {n(W['cr']['cr']['J1'],2)}; J2 {n(W['cr']['cr']['J2'],3)}; J3 {n(W['cr']['cr']['J3'],2)}. Urutan pengerjaan {' > '.join(W['cr']['order'])}."),
+    ("6. Tawaran antar lini gudang (Contract Net)",
+     f"Job 1,8 hari pada hari ke-5. Lini a: antrean 2,4 hari, kecepatan 1,02, perkiraan selesai hari {n(W['bids']['a'],2)}. Lini b: antrean 0,9 hari, kecepatan 0,97, selesai hari {n(W['bids']['b'],2)}, sehingga job diberikan ke lini b. "
+     f"Bila sensor menandai lini b akan rusak sampai hari ke-7,5, perkiraan lini b menjadi {n(W['bids']['b_alerted'],2)} dan lini a menang."),
+    ("7. Memilih carrier",
+     f"Order ${n(ca['value'],0,'',True)}, satu kontainer, tiba di gerbang hari {n(ca['tport'],1)}, batas kirim hari {n(ca['lsd'],0)}. " +
+     "; ".join(f"{r['name']}: biaya {usd(r['cost'])}, berangkat hari {n(r['dep'],0)}, peluang ditinggal kapal {n(r['p'],2)}, biaya harapan {usd(r['exp_total'])}" for r in ca["rows"]) +
+     f". Skor gabungan (harga, waktu transit, dan peluang ditinggal kapal) memilih {ca['best_h']}; jika hanya melihat biaya harapan, yang terpilih {ca['best_exp']}."),
+    ("8. Risiko kontainer ditinggal kapal (roll-over)",
+     f"Untuk {ro['carrier']} pada kondisi pelabuhan padat (0,6), musim puncak, dan selisih waktu aman 2 hari, model memberi peluang {n(ro['p'],3)}. Carrier tercepat pada kondisi yang sama {n(ro['p_prime'],3)}. Model Risk Agent mempelajari peluang ini dari 4.000 pengiriman historis (AUC {n(R['risk']['auc'],2)})."),
+    ("9. Kepercayaan terhadap carrier",
+     f"Skor kepercayaan 0,80. Bila kontainer terangkut, skor menjadi {n(tr[0]['new'],2)}. Bila ditinggal kapal, menjadi {n(tr[1]['new'],2)}; ditinggal kedua kali menjadi {n(tr[2]['new'],3)}, di bawah 0,60 sehingga carrier diblokir sementara."),
+    ("10. Biaya dan margin satu order (skenario 7, order #1 dan #4)",
+     "; ".join(f"{'Manual' if m=='static' else 'Multi-agen'} order #{oid}: {n(v['qty']/1000,0)} ton, terisi {pc(v['fill'],0)}, {v['rounds']} putaran, {v['producers']} produsen, bahan {usd(v['src_cost'])}, freight {usd(v['freight'])}, denda {usd(v['penalty'])}, "
+               f"penyimpanan {usd(v['hold'])}, biaya manusia {usd(v['human'])}, pendapatan {usd(v['revenue'])} (terlambat {n(v['late'],0)} hari)" for m in ("static", "mas") for oid, v in ot[m].items()) + "."),
+    ("11. Agen mobile (Scout)",
+     "Scout hanya berpindah ke sistem carrier yang tepercaya (kepercayaan minimal 0,80 dan risiko maksimal 0,20); carrier A (kepercayaan 0,71) ditolak walau paling cepat. "
+     f"Data yang dipindahkan per skenario: {n(KR['scout']['bytes']/1e6,1)} MB (scout) dibanding {n(KR['scout']['raw']/1e6,1)} MB bila menarik seluruh jadwal; hemat {pc(1-KR['scout']['bytes']/KR['scout']['raw'],0)}."),
 ]
 
 # ============================================================ related work
@@ -262,7 +243,7 @@ SOTA_ROWS = [
  ("Pergelova2019", "A", "Pergelova, A., Manolova, T., Simeonova-Ganeva, R., & Yordanova, D. (2019). Democratizing entrepreneurship? Digital technologies and the internationalization of female-led SMEs. Journal of Small Business Management, 57(1), 14-39.",
   "J. Small Bus. Manage.", "Q1", "10.1111/jsbm.12494",
   "Kapabilitas digital meningkatkan internasionalisasi (ekspor) UMKM di pasar berkembang.",
-  "Motivasi bisnis Xpora: teknologi digital menurunkan hambatan ekspor UMKM. Celah: studi survei; tidak menawarkan mekanisme koordinasi operasional."),
+  "Motivasi bisnis: teknologi digital (termasuk pemasaran digital) menurunkan hambatan ekspor UMKM. Celah: studi survei; tidak menawarkan mekanisme koordinasi operasional."),
 ]
 SOTA_BY = {r[0]: r for r in SOTA_ROWS}
 def doi_url(d): return "https://doi.org/" + d
@@ -280,33 +261,36 @@ SOTA_GAP = [
     "Celah 2: nilai desentralisasi biasanya diklaim, bukan diukur; XCMAS mengisolasi nilainya (bid live vs registry usang) dengan aturan keputusan yang sama pada agen tunggal dan multi-agen, sehingga selisih hanya berasal dari arsitektur.",
     "Celah 3: model ML logistik ekspor (Hathikal dkk., 2020; Lee dkk., 2024) berdiri sendiri; XCMAS menanamkannya sebagai komponen agen (Risk dan Compliance) yang memicu tindakan (re-kontrak, eskalasi ke manusia, pilihan carrier).",
     "Celah 4: adopsi LLM pada agen (Wang dkk., 2024) belum disertai kontrol aksi yang dapat diaudit; XCMAS membatasi LLM dengan guardrail, otonomi berlevel, dan audit log berantai-hash.",
-    "Celah 5: bukti pada bisnis nyata kecil; kasus dikalibrasi dari Xpora (tempe) dan KrakaCoal (arang) dengan mesin yang sama untuk dua komoditas.",
+    "Celah 5: bukti pada bisnis nyata kecil; kasus dikalibrasi dari klaim operasional KrakaCoal (MOQ, lead time, packing) sehingga hasilnya dekat dengan praktik ekspor arang.",
 ]
 
 # ============================================================ why multi-agent
 stX = XP["staleness"]["avail"]; stK = KR["staleness"]["avail"]
 def adv(pf, a, key="margin"): d = P[pf]["staleness"]["avail"][a]; return (d["mas"][key][0] - d["central"][key][0]) / (PROFILES[pf].n_orders if key == "margin" else 1)
 CRITERIA = [
-    ["Kriteria (Bab 4)", "Terpusat", "Terdesentralisasi", "Hybrid", "Posisi XCMAS"],
+    ["Kriteria (Bab 4)", "Terpusat", "Terdesentralisasi", "Hybrid", "Posisi KCMAS"],
     ["Latensi dan bandwidth", "Sedang", "Rendah", "Rendah-sedang", "CFP hanya ke kandidat (fan-out dibatasi)"],
     ["Fault tolerance", "Rendah (single point of failure)", "Tinggi", "Tinggi", "Kegagalan satu produsen/agen tidak menghentikan order"],
     ["Optimalitas global", "Tinggi bila data akurat", "Lokal", "Cukup tinggi", "Aturan skor bersama + governance; data segar dari bid"],
     ["Biaya koordinasi", "Fan-in O(n) pada koordinator", "Tinggi (banyak pesan)", "Sedang", "Lebih banyak pesan per order pada pemasokan"],
 ]
 WHY = [
-    ("Batas organisasi dan kepemilikan", "Produsen UMKM, carrier, bea cukai, dan pembeli adalah pihak otonom; planner pusat tidak dapat memerintah mereka, hanya menegosiasikan (CFP/PROPOSE/ACCEPT). Konsorsium Xpora memang berbasis kepercayaan lintas pemilik."),
-    ("Informasi lokal yang segar", f"Kapasitas nyata produsen berubah (pasar lokal, musim, kondisi). Bid multi-agen memakai kapasitas nyata; registry pusat kedaluwarsa. Dengan variasi ketersediaan 45% (default), multi-agen menaikkan margin {usd(adv('xpora','0.55'))}/order (Xpora) dan {usd(adv('kraka','0.55'))}/order (KrakaCoal); "
-     f"bila kapasitas stabil (variasi 0%) selisihnya {usd(adv('xpora','1.0'))} dan {usd(adv('kraka','1.0'))}."),
-    ("Ketahanan terhadap single point of failure", f"Gangguan bidang kontrol 2-5 hari pada 50% skenario mengubah OTIF agen tunggal dari {pc(P['xpora']['robust']['0.0']['central']['otif'][0])} ke {pc(P['xpora']['robust']['0.5']['central']['otif'][0])} dan multi-agen dari {pc(P['xpora']['robust']['0.0']['mas']['otif'][0])} ke {pc(P['xpora']['robust']['0.5']['mas']['otif'][0])} (Xpora): tidak ada penurunan berarti karena jadwal memiliki slack; ketahanan bukan alasan utama pada kasus ini, tetapi menjadi relevan bila slack ketat."),
-    ("Beban node puncak dan skala", f"Pada {XP['scale'][-1]['n_producers']} produsen, koordinator menerima {n(XP['scale'][-1]['central']['coord_peak'],0)} pesan pada hari tersibuk vs {n(XP['scale'][-1]['mas']['peak_node'],0)} pada agen tersibuk multi-agen; total pesan justru lebih banyak pada multi-agen untuk pemasokan ({n(XP['scale'][-1]['mas']['msgs'],0,'',True)} vs {n(XP['scale'][-1]['central']['msgs'],0,'',True)})."),
-    ("Modularitas dan komoditas baru", "Producer Agent cukup diberi profil baru (kapasitas, harga, perishable) untuk komoditas lain: profil KrakaCoal dan Xpora dijalankan pada mesin yang sama tanpa mengubah agen (klaim agnostik komoditas pada submission Xpora)."),
+    ("Batas organisasi dan kepemilikan", "Produsen arang, carrier, bea cukai, dan pembeli adalah pihak otonom; planner pusat tidak dapat memerintah mereka, hanya menegosiasikan (minta tawaran, tawaran, terima/tolak). Jaringan KrakaCoal memang berbasis kepercayaan lintas pemilik."),
+    ("Informasi lokal yang segar", f"Kapasitas nyata produsen berubah (pembeli lokal, cuaca, bahan baku). Bid multi-agen memakai kapasitas nyata; data pendaftaran pusat cepat usang. Dengan variasi ketersediaan 45% (default), multi-agen menaikkan margin {usd(adv('kraka','0.55'))} per order; "
+     f"bila kapasitas stabil (variasi 0%) selisihnya {usd(adv('kraka','1.0'))}."),
+    ("Ketahanan terhadap single point of failure", f"Gangguan koordinator pusat 2-5 hari pada 50% skenario mengubah OTIF agen tunggal dari {pc(P['kraka']['robust']['0.0']['central']['otif'][0])} ke {pc(P['kraka']['robust']['0.5']['central']['otif'][0])} dan multi-agen dari {pc(P['kraka']['robust']['0.0']['mas']['otif'][0])} ke {pc(P['kraka']['robust']['0.5']['mas']['otif'][0])}: "
+     "perbedaannya kecil karena jadwal memiliki cadangan waktu; ketahanan bukan alasan utama pada kasus ini, tetapi menjadi relevan bila jadwal ketat."),
+    ("Beban node puncak dan skala", f"Pada {KR['scale'][-1]['n_producers']} produsen, koordinator menerima {n(KR['scale'][-1]['central']['coord_peak'],0)} pesan pada hari tersibuk dibanding {n(KR['scale'][-1]['mas']['peak_node'],0)} pada agen tersibuk multi-agen; total pesan justru lebih banyak pada multi-agen untuk pemasokan ({n(KR['scale'][-1]['mas']['msgs'],0,'',True)} vs {n(KR['scale'][-1]['central']['msgs'],0,'',True)})."),
+    ("Modularitas", "Tiap peran (produsen, gudang, carrier, pemasaran) adalah agen terpisah sehingga dapat diganti atau ditambah tanpa mengubah agen lain; misalnya Marketing Agent ditambahkan tanpa mengubah alur pemasokan."),
 ]
 WHY_HONEST = ("Catatan penting: keunggulan multi-agen bergantung pada seberapa kedaluwarsa data pusat. Bila kapasitas produsen stabil dan registry akurat, agen tunggal terpusat setara. "
               "Rekomendasi: arsitektur hybrid: satu inti kognitif per pabrik/gudang, negosiasi multi-agen pada batas organisasi (produsen, carrier), dan governance sebagai bidang kontrol; "
-              "untuk pilot 20 produsen yang stabil, agen tunggal + WhatsApp sudah cukup, lalu berpindah ke multi-agen saat pool tumbuh ke ratusan produsen dengan kapasitas berubah-ubah.")
+              "untuk 20 produsen yang stabil, agen tunggal + WhatsApp sudah cukup, lalu berpindah ke multi-agen saat pool tumbuh ke ratusan produsen dengan kapasitas berubah-ubah.")
 
 AGENTS = [
     ["Agen", "Tipe", "Belief / Desire / Intention", "Komponen internal dan tools", "Input -> Output", "Metode", "Otonomi"],
+    ["Marketing & Ads Agent", "Deliberatif + belajar, statis", "B: performa tiap kanal, anggaran, kapasitas tersedia. D: sebanyak mungkin RFQ berkualitas per dolar iklan. I: membagi anggaran, membuat iklan dan konten, menjeda kampanye",
+     "Pembagi anggaran (Thompson sampling), pembuat materi iklan (LLM), pemeriksa klaim (harus sesuai spesifikasi dan sertifikat nyata), sinyal kapasitas dari Order Agent", "Kapasitas + performa kanal -> kampanye, iklan; klik/RFQ -> pembaruan", "Bandit multi-lengan + LLM + aturan klaim", "Supervise (materi baru disetujui manusia)"],
     ["Sales Agent (Virtual SDR)", "Deliberatif, statis", "B: RFQ, spesifikasi, batas harga. D: konversi RFQ ke LoI. I: menawar/berkonsesi atau eskalasi",
      "Deteksi niat, kalkulator konsesi (beta), guardrail harga, hook LLM, CRM", "RFQ -> LoI / eskalasi", "LLM (opsional) + konsesi waktu-tergantung", "Supervise (LoI dalam band harga)"],
     ["Order Agent (x n)", "Hybrid, statis", "B: ETA, antrean, trust. D: terisi penuh dan berangkat <= LSD dengan margin maksimum. I: memilih bid produsen/lini/carrier",
@@ -333,10 +317,12 @@ AGENTS = [
 PORTFOLIO = [
     ["Komponen", "Metode", "Kelas", "Alasan pemilihan", "Mengapa bukan DL/LLM (sekarang)"],
     ["Alokasi kuota produsen", "Contract Net + skor berbobot + buffer + governance", "AI klasik / DSS", "Keputusan dapat dijelaskan ke produsen dan buyer; kendala keras (kapasitas, konsentrasi, kualitas)", "Data historis produsen belum ada; optimasi eksplisit lebih tepat daripada model black-box"],
-    ["Quality score produsen", "Pembaruan eksponensial (trust)", "Statistik online", "Insentif kualitas organik (submission Xpora); sederhana dan transparan", "Tidak butuh model kompleks"],
+    ["Quality score produsen", "Pembaruan eksponensial (trust)", "Statistik online", "Insentif kualitas organik; sederhana dan transparan", "Tidak butuh model kompleks"],
     ["Klasifikasi HS lintas komoditas", "TF-IDF + k-NN kosinus", "ML klasik (NLP)", f"Deskripsi pendek, ~1.000 contoh; akurasi {pc(R['hs']['acc'])}; confidence dapat dijelaskan", "Data kecil; LLM/BERT ditambahkan bila kosakata dan bahasa bertambah"],
     ["Risiko roll-over", "Regresi logistik", "ML supervised", f"Data tabular 4.000 pengiriman; AUC {n(R['risk']['auc'],2)}; bobot terbaca; probabilitas terkalibrasi", "Pada data tabular kecil, model linier setara DL (Bab 1); XGBoost sebagai pembanding"],
-    ["QC visual (Grade A/B/Reject)", "CNN (rencana tim Xpora); di sini: yield statistik", "DL (rencana)", "Citra produk adalah data yang cocok untuk DL (Bab 1); dataset sedang dikumpulkan", "Belum ada dataset terlabel; Tugas 1 memodelkan hasilnya (pass rate) saja"],
+    ["QC visual (Grade A/B/Reject)", "CNN (rencana); di sini: tingkat kelolosan statistik", "DL (rencana)", "Citra produk adalah data yang cocok untuk DL (Bab 1); dataset sedang dikumpulkan", "Belum ada dataset terlabel; Tugas 1 memodelkan hasilnya (pass rate) saja"],
+    ["Alokasi anggaran iklan", "Thompson sampling (bandit multi-lengan)", "RL sederhana", "Kanal mana yang terbaik tidak diketahui dan berubah; metode ini mencoba dan bergeser ke kanal yang menghasilkan RFQ", "Optimasi penuh butuh data klik yang belum ada; bandit cukup dan dapat dijelaskan"],
+    ["Pembuatan materi iklan dan konten", "LLM + pemeriksa klaim + persetujuan manusia", "LLM + aturan", "Menulis banyak varian bahasa dan format dengan cepat; klaim (sertifikat, spesifikasi, kapasitas) dicek terhadap data nyata sebelum tayang", "LLM tidak boleh menyebut sertifikat atau kapasitas yang tidak ada; belum diimplementasikan"],
     ["Virtual SDR", "LLM + konsesi waktu-tergantung + guardrail", "LLM + aturan", "Bahasa alami multibahasa 24/7; harga dijaga oleh aturan dan band diskon (Bab 3: LLM tidak sendirian)", "Di simulasi hanya logika negosiasi; panggilan LLM belum dipakai (hook tersedia)"],
     ["Keputusan lembur", "Q-learning tabular", "RL", "Ruang state kecil, reward tertunda", "Deep RL tidak diperlukan; sulit diaudit"],
     ["Kesehatan lini", "Slope percept sequence", "Statistik", "Bab 2: tren lebih informatif daripada nilai tunggal", "Sensor sedikit"],
@@ -344,13 +330,13 @@ PORTFOLIO = [
     ["Keamanan dan otonomi", "HMAC, nonce, FSM, capability", "Deterministik", "Jaminan keamanan harus pasti", "-"],
 ]
 CRIT_NOTE = ("Kriteria pemilihan model (Bab 3): akurasi dan explainability, latensi dan biaya, privasi dan data, skalabilitas. Prinsip Bab 1: pilih model paling sederhana yang memenuhi kebutuhan. "
-             "Kesimpulan: XCMAS adalah hibrida AI klasik + ML supervised + RL kecil + aturan deterministik, dengan slot untuk LLM (Sales) dan CNN (QC) yang dikembangkan tim.")
+             "Kesimpulan: XCMAS adalah hibrida AI klasik + ML supervised + RL kecil + aturan deterministik, dengan slot untuk LLM (Sales dan Marketing) dan CNN (QC) sebagai pengembangan berikutnya.")
 
 lv = XP["levels"]["mas"]; tot_lv = sum(lv.values())
-AUTONOMY = [["Level (Bab 2)", "Keputusan pada XCMAS", "Rata-rata per skenario (Xpora)", "Kendali"],
+AUTONOMY = [["Level (Bab 2)", "Keputusan pada KCMAS", "Rata-rata per skenario", "Kendali"],
     ["4 Delegate", "Dispatch lini, kuota dalam batas konsentrasi, HS confidence >= 0,60, carrier order di bawah batas nilai", f"{n(lv['4'],1)} ({pc(lv['4']/tot_lv,0)})", "Otomatis, audit trail"],
     ["3 Supervise", "Lembur dalam anggaran, LoI dalam band harga", f"{n(lv['3'],1)}", "Agen bertindak, manusia dapat override"],
-    ["2 Approve", "Verifikasi DP (selalu), HS confidence rendah, order bernilai tinggi, lembur di luar anggaran", f"{n(lv['2'],1)}", "Human-in-the-loop"],
+    ["2 Approve", "Verifikasi DP (selalu), HS confidence rendah, order bernilai tinggi, lembur di luar anggaran, materi iklan dengan klaim baru", f"{n(lv['2'],1)}", "Human-in-the-loop"],
     ["1 Assist", "Belum dipakai (mode rekomendasi)", f"{n(lv['1'],1)}", "Rekomendasi"]]
 ATTACKS = [["Serangan / pelanggaran", "Hasil pada bus pesan"]] + [[k, v] for k, v in R["attacks"].items()]
 MIGR = [["Host", "Trust", "Latensi (ms)", "Risiko", "Skor", "Keputusan"]] + [[hh["host"], n(hh["trust"], 2), n(hh["latency"], 0), n(hh["risk"], 2), n(hh["score"], 2), hh["decision"]] for hh in R["migration_table"]]
@@ -365,7 +351,7 @@ def main_table(pf):
             ("Penalti per order", "penalty", lambda x: n(x / nn, 0, "", True), False), ("Limbah surplus per order", "surplus_waste", lambda x: n(x / nn, 0, "", True), False),
             ("Sentuhan manusia per order", "touches", lambda x: n(x, 1), False), ("Kesalahan HS", "hs_err", lambda x: pc(x), False),
             ("Putaran sourcing per order", "rounds", lambda x: n(x, 2), False), ("Produsen dikontrak per order", "producers_used", lambda x: n(x, 1), False),
-            ("Gagal kirim per order", "defaults", lambda x: n(x, 2), False), ("Jain kuota antar produsen", "jain_producers", lambda x: n(x, 2), False),
+            ("Gagal kirim per order", "defaults", lambda x: n(x, 2), False),
             ("Total pesan per skenario", "msgs", lambda x: n(x, 0, "", True), False), ("Pesan koordinator pada hari tersibuk", "coord_peak", lambda x: n(x, 0), False),
             ("Pesan agen tersibuk", "peak_node", lambda x: n(x, 0), False)]
     for name, k, f, with_ci in spec:
@@ -394,30 +380,28 @@ def ablation_table(pf):
     return rows
 
 def staleness_table():
-    rows = [["Variasi ketersediaan (1 - u_min)", "Xpora: margin/order (agen tunggal / multi-agen)", "Xpora: OTIF", "KrakaCoal: margin/order", "KrakaCoal: OTIF"]]
-    for a in sorted(stX, key=float, reverse=True):
-        r_ = [pc(1 - float(a), 0)]
-        for pf in ("xpora", "kraka"):
-            d = P[pf]["staleness"]["avail"][a]; nn = PROFILES[pf].n_orders
-            r_ += [f"{n(d['central']['margin'][0]/nn,0,'',True)} / {n(d['mas']['margin'][0]/nn,0,'',True)}", f"{pc(d['central']['otif'][0],0)} / {pc(d['mas']['otif'][0],0)}"]
-        rows.append(r_)
+    rows = [["Variasi ketersediaan (1 - u_min)", "Margin/order (agen tunggal / multi-agen)", "OTIF (agen tunggal / multi-agen)"]]
+    for a in sorted(stK, key=float, reverse=True):
+        d = P["kraka"]["staleness"]["avail"][a]; nn = PFK.n_orders
+        rows.append([pc(1 - float(a), 0), f"{n(d['central']['margin'][0]/nn,0,'',True)} / {n(d['mas']['margin'][0]/nn,0,'',True)}", f"{pc(d['central']['otif'][0],0)} / {pc(d['mas']['otif'][0],0)}"])
     return rows
 
 def buffer_table():
-    rows = [["Buffer awal", "Xpora: margin/order", "Xpora: OTIF", "Xpora: limbah/order", "KrakaCoal: margin/order", "KrakaCoal: OTIF", "KrakaCoal: limbah/order"]]
-    for b in sorted(XP["buffer"], key=float):
-        r_ = [pc(float(b), 0)]
-        for pf in ("xpora", "kraka"):
-            d = P[pf]["buffer"][b]; nn = PROFILES[pf].n_orders
-            r_ += [n(d["margin"][0] / nn, 0, "", True), pc(d["otif"][0], 0), n(d["surplus_waste"][0] / nn, 0, "", True)]
-        rows.append(r_)
+    rows = [["Buffer awal", "Margin/order (USD)", "OTIF", "Limbah surplus/order (USD)"]]
+    for b in sorted(KR["buffer"], key=float):
+        d = P["kraka"]["buffer"][b]; nn = PFK.n_orders
+        rows.append([pc(float(b), 0), n(d["margin"][0] / nn, 0, "", True), pc(d["otif"][0], 0), n(d["surplus_waste"][0] / nn, 0, "", True)])
     return rows
 
-ROBUST = [["P(gangguan bidang kontrol)", "Xpora: manual", "Xpora: agen tunggal", "Xpora: multi-agen", "KrakaCoal: agen tunggal", "KrakaCoal: multi-agen"]] + [
-    [n(float(p), 1)] + [pc(P["xpora"]["robust"][p][m]["otif"][0], 0) for m in MODES] + [pc(P["kraka"]["robust"][p][m]["otif"][0], 0) for m in ("central", "mas")] for p in sorted(P["xpora"]["robust"], key=float)]
+ROBUST = [["Peluang gangguan koordinator pusat", "OTIF manual", "OTIF agen tunggal", "OTIF multi-agen"]] + [
+    [n(float(p), 1)] + [pc(P["kraka"]["robust"][p][m]["otif"][0], 0) for m in MODES] for p in sorted(P["kraka"]["robust"], key=float)]
 SCALE = [["Order / produsen", "Koordinator: puncak pesan/hari", "MAS: agen tersibuk", "Total pesan (pusat / MAS)", "OTIF (pusat / MAS)"]] + [
-    [f"{r['n_orders']} / {r['n_producers']}", n(r["central"]["coord_peak"], 0), n(r["mas"]["peak_node"], 0), f"{n(r['central']['msgs'],0,'',True)} / {n(r['mas']['msgs'],0,'',True)}", f"{pc(r['central']['otif'],0)} / {pc(r['mas']['otif'],0)}"] for r in XP["scale"]]
+    [f"{r['n_orders']} / {r['n_producers']}", n(r["central"]["coord_peak"], 0), n(r["mas"]["peak_node"], 0), f"{n(r['central']['msgs'],0,'',True)} / {n(r['mas']['msgs'],0,'',True)}", f"{pc(r['central']['otif'],0)} / {pc(r['mas']['otif'],0)}"] for r in KR["scale"]]
 sh, ss = R["sales"]["human"], R["sales"]["sdr"]
+MK = json.loads((ROOT / "outputs/marketing.json").read_text())
+MARKETING_TABLE = [["Strategi (12 minggu, USD 500/minggu)", "RFQ berkualitas (rata-rata)", "Rentang 95%", "Biaya per RFQ (USD)"]] + [
+    [nm, n(MK[k]['leads_mean'], 1), f"{n(MK[k]['leads_ci'][0],0)} - {n(MK[k]['leads_ci'][1],0)}", n(MK[k]['cost_per_rfq'], 0)] for nm, k in (("Pembagian rata ke semua kanal", "fixed"), ("Marketing Agent (bandit)", "agent"))]
+MARKETING_SHARE = [["Kanal iklan", "Porsi anggaran: rata", "Porsi anggaran: agen"]] + [[c, pc(MK['fixed']['share'][i], 0), pc(MK['agent']['share'][i], 0)] for i, c in enumerate(MK['channels'])]
 ML_STATS = [["Model", "Metrik", "Nilai"],
     ["Klasifikasi HS (uji 25%, 7 heading)", "Akurasi (semua)", pc(R["hs"]["acc"])],
     ["Klasifikasi HS", "Akurasi pada yang otomatis (tau = 0,60)", pc(min(r for r in R["hs"]["selective"] if abs(r[0] - 0.6) < .03)[2])],
@@ -430,159 +414,185 @@ ML_STATS = [["Model", "Metrik", "Nilai"],
 
 def _d(pf, name, key="margin"): return (P[pf]["ablation"][name][key][0] - P[pf]["ablation"]["MAS (full)"][key][0]) / (PROFILES[pf].n_orders if key == "margin" else 1)
 INTERPRET = [
-    f"Sumber nilai terbesar (margin per order): kuota berbasis bid live ({usd(-_d('xpora','- live bids (stale registry instead)'))} Xpora, {usd(-_d('kraka','- live bids (stale registry instead)'))} KrakaCoal), dokumen paralel dengan sourcing "
-    f"({usd(-_d('xpora','- parallel documents'))} dan {usd(-_d('kraka','- parallel documents'))}), dan re-optimasi carrier ({usd(-_d('xpora','carrier rule = keep committed carrier'))} dan {usd(-_d('kraka','carrier rule = keep committed carrier'))}). "
-    f"Quality-score prioritisation: {usd(-_d('xpora','- quality-score prioritisation (price only)'))} dan {usd(-_d('kraka','- quality-score prioritisation (price only)'))}; tanpa buffer margin turun {usd(-_d('xpora','- over-allocation buffer (0 %)'))} dan {usd(-_d('kraka','- over-allocation buffer (0 %)'))}.",
-    f"Trade-off: menghapus model risiko atau memakai aturan biaya-harapan dapat menaikkan margin ({usd(_d('xpora','- ML risk model (advertised reliability)'))} dan {usd(_d('xpora','carrier rule = expected cost'))} per order pada Xpora) tetapi menurunkan OTIF; "
-    "aturan hibrida (Bab 3) memprioritaskan tingkat layanan. Pilihan bobot adalah keputusan bisnis; kerugian reputasi dan L/C tidak dimodelkan sehingga nilai layanan di sini konservatif.",
-    f"Buffer over-allocation: margin puncak pada 15-20% (Bagian sweep) karena kekurangan pasokan (gagal kirim, reject QC) lebih mahal daripada limbah surplus yang dijual 60% harga beli. Pada buffer 30% margin turun karena limbah surplus.",
-    f"Pembelajaran RL: policy Q dari MDP abstrak tidak transfer ke simulator (hampir tidak pernah lembur), sedangkan Q yang dilatih langsung di simulator setara aturan slack<0. Pada sebagian profil 'selalu lembur (dalam anggaran)' lebih baik: lembur murah dibanding penalti dan anggaran governance menjadi parameter yang mengikat. "
-    "Penyebab Q tidak menemukannya: reward akhir bising dan kredit tercampur antar order; perbaikan: difference reward (Bab 4) dan lebih banyak episode.",
-    f"Sales/SDR (eksploratif, bergantung asumsi waktu balas): konversi RFQ ke deal {pc(sh['conversion'],0)} (meja manusia) vs {pc(ss['conversion'],0)} (SDR) dan waktu ke harga sepakat {n(sh['mean_hours'],0)} vs {n(ss['mean_hours'],0)} jam; harga rata-rata hampir sama karena strategi konsesi sama. Perlu divalidasi dengan data RFQ nyata.",
+    f"Sumber nilai terbesar (margin per order): kuota berbasis tawaran live ({usd(-_d('kraka','- live bids (stale registry instead)'))}), dokumen paralel dengan pemasokan ({usd(-_d('kraka','- parallel documents'))}), dan memilih ulang carrier ({usd(-_d('kraka','carrier rule = keep committed carrier'))}). "
+    f"Prioritas skor mutu: {usd(-_d('kraka','- quality-score prioritisation (price only)'))}; tanpa buffer margin turun {usd(-_d('kraka','- over-allocation buffer (0 %)'))}.",
+    f"Trade-off: menghapus model risiko atau memilih carrier hanya dari biaya harapan dapat menaikkan margin ({usd(_d('kraka','- ML risk model (advertised reliability)'))} dan {usd(_d('kraka','carrier rule = expected cost'))} per order) tetapi menurunkan OTIF; "
+    "aturan hibrida memprioritaskan tingkat layanan. Pilihan bobot adalah keputusan bisnis; kerugian reputasi tidak dimodelkan sehingga nilai layanan di sini konservatif.",
+    "Buffer: margin puncak pada 15-20% karena kekurangan pasokan (gagal kirim, reject uji mutu) lebih mahal daripada limbah surplus yang dijual 60% harga beli. Pada buffer 30% margin turun karena limbah surplus.",
+    "Pembelajaran mesin untuk keputusan lembur: kebijakan yang dilatih pada model sederhana tidak berpindah ke simulator, sedangkan yang dilatih langsung di simulator setara aturan sederhana 'lembur bila sisa waktu negatif'. Pada simulasi ini 'selalu lembur dalam anggaran' bisa lebih baik karena lembur murah dibanding denda.",
+    f"Sales dan Marketing (eksploratif, bergantung asumsi): konversi RFQ ke kesepakatan {pc(sh['conversion'],0)} (meja manusia) vs {pc(ss['conversion'],0)} (SDR); waktu ke harga sepakat {n(sh['mean_hours'],0)} vs {n(ss['mean_hours'],0)} jam. "
+    f"Pembagian anggaran iklan oleh agen menghasilkan sekitar {n(MK['uplift_pct'],0)}% lebih banyak RFQ berkualitas daripada pembagian rata; bila peringkat kanal selalu sama antar pasar, selisihnya {n(MK['uplift_fixed_ranking_pct'],0)}%. Keduanya perlu divalidasi dengan data nyata.",
 ]
 LIMITS = [
-    "Data sintetis: pilot Xpora belum mengirim, KrakaCoal tidak mempublikasikan harga atau syarat pembayaran. Tidak ada klaim performa nyata; kalibrasi ke data ERP/CRM riil adalah langkah wajib berikutnya.",
-    "Keunggulan multi-agen bergantung pada asumsi variasi ketersediaan (45%) dan noise registry (10%); sweep sensitivitas ditampilkan dan pada variasi 0% keunggulan hilang.",
-    "Keunggulan jumlah pesan pusat vs MAS bergantung pada asumsi heartbeat/refresh registry mingguan dan fan-out CFP; pada pemasokan multi-agen memakai lebih banyak pesan.",
-    "QC (CNN) dan Virtual SDR (LLM) tidak diimplementasikan sebagai model; QC dimodelkan sebagai pass-rate statistik dan SDR sebagai logika konsesi. Modul SDR bersifat eksploratif.",
-    "Penalti keterlambatan, harga jual, dan tarif carrier adalah asumsi; kerugian reputasi, pembatalan L/C, dan kurs tidak dimodelkan. Data volume scout adalah asumsi.",
-    "Model risiko (AUC 0,76) dilatih pada data yang dibangkitkan dari proses logit yang kita tulis; belum ada uji drift/retraining online.",
-    "Simulasi diskret (langkah 0,05 hari), 300 skenario evaluasi per profil (seed 0-299), terpisah dari seed kalibrasi (1000+) dan pelatihan RL (10000+).",
-    "Belum ada UI dashboard, integrasi WhatsApp Business API, atau API bea cukai/carrier nyata; itu rencana Project #1 dan MVP Xpora.",
+    "Data sintetis: KrakaCoal tidak mempublikasikan harga atau syarat pembayaran. Tidak ada klaim performa nyata; kalibrasi ke data operasional riil (ERP/CRM, riwayat produsen) adalah langkah wajib berikutnya.",
+    "Keunggulan multi-agen bergantung pada asumsi variasi ketersediaan (45%) dan galat data pendaftaran (10%); sweep sensitivitas ditampilkan dan pada variasi 0% keunggulan hilang.",
+    "Jumlah pesan pusat vs multi-agen bergantung pada asumsi refresh data mingguan dan batas fan-out CFP; pada pemasokan multi-agen memakai lebih banyak pesan.",
+    "Uji mutu berbasis citra (CNN) dan LLM untuk Sales dan Marketing tidak diimplementasikan sebagai model; uji mutu dimodelkan sebagai tingkat kelolosan statistik, Sales sebagai logika konsesi, dan Marketing sebagai simulasi pembagian anggaran. Ketiganya eksploratif.",
+    "Denda keterlambatan, harga jual, dan tarif carrier adalah asumsi; kerugian reputasi, pembatalan L/C, dan kurs tidak dimodelkan. Angka simulasi Marketing (tingkat RFQ per dolar tiap kanal) adalah asumsi, bukan data KrakaCoal.",
+    "Model risiko (AUC 0,76) dilatih pada data yang dibangkitkan dari proses yang kami tulis sendiri; belum ada uji drift atau retraining online.",
+    f"Simulasi diskret (langkah 0,05 hari), {R['n_scenarios']} skenario evaluasi (seed 0-299), terpisah dari seed kalibrasi (1000+) dan pelatihan pembelajaran mesin (10000+).",
+    "Belum ada UI dashboard, integrasi WhatsApp Business API, API iklan (Google/LinkedIn), atau API bea cukai/carrier nyata; itu rencana Project #1.",
 ]
 BIZ = [
     ["Rekomendasi operasional", "Dasar pada eksperimen"],
-    ["Pakai buffer over-allocation 15% pada putaran pertama; pertahankan re-kontrak untuk kekurangan", "Sweep buffer: margin puncak 15-20%; tanpa buffer OTIF turun tajam"],
-    ["Minta konfirmasi kapasitas nyata dari produsen (template WhatsApp) sebelum mengunci kuota, bukan mengandalkan data onboarding", "Sweep staleness: nilai bid live tumbuh dengan variasi ketersediaan"],
-    ["Prioritaskan produsen dengan quality score tinggi dan blokir score < 0,60; batasi 30% per produsen", "Ablation quality-score dan concentration cap; Jain kuota tetap terpantau"],
+    ["Pesan produsen 15% lebih banyak dari kebutuhan pada putaran pertama; pertahankan re-kontrak untuk kekurangan", "Sweep buffer: margin puncak 15-20%; tanpa buffer OTIF turun tajam"],
+    ["Minta konfirmasi kapasitas nyata dari produsen (template WhatsApp) sebelum mengunci kuota, bukan mengandalkan data pendaftaran", "Sweep data usang: nilai tawaran live tumbuh dengan variasi ketersediaan"],
+    ["Prioritaskan produsen dengan skor mutu tinggi, blokir skor di bawah 0,60, batasi 30% per produsen", "Ablation skor mutu dan batas konsentrasi"],
     ["Mulai dokumen (HS, sertifikat) saat DP terverifikasi, paralel dengan produksi", "Ablation: dokumen paralel = penghematan waktu terbesar kedua"],
-    ["Pertahankan verifikasi DP manual (level 2) dan persetujuan order bernilai tinggi", "Desain Xpora; menambah 1 sentuhan per order namun mencegah kesalahan pembayaran"],
-    ["Untuk pilot 20 produsen stabil, mulai dengan agen tunggal; pindah ke multi-agen saat pool ratusan produsen", "Kesimpulan sensitivitas dan skala"],
-    ["Kumpulkan data untuk kalibrasi: syarat pembayaran, harga beli per produsen, tingkat gagal kirim dan reject, waktu balas WhatsApp", "Batasan data sintetis"],
+    ["Pertahankan verifikasi DP manual (level 2) dan persetujuan order bernilai tinggi", "Menambah sekitar satu sentuhan per order namun mencegah kesalahan pembayaran"],
+    ["Bagi anggaran iklan antar kanal secara adaptif, dan hanya iklankan produk yang kapasitasnya tersedia", "Simulasi Marketing (eksploratif); sinyal kapasitas dari Order Agent"],
+    ["Untuk 20 produsen yang stabil, mulai dengan agen tunggal; pindah ke multi-agen saat pool ratusan produsen", "Kesimpulan sensitivitas dan skala"],
+    ["Kumpulkan data untuk kalibrasi: syarat pembayaran, harga beli per produsen, tingkat gagal kirim dan reject, waktu balas WhatsApp, performa tiap kanal iklan", "Batasan data sintetis"],
 ]
-LECTURE_MAP = [["Materi kuliah", "Penerapan pada XCMAS", "Berkas kode"],
-    ["Bab 1: hibrida prediksi + aturan deterministik; model paling sederhana yang memadai", "Risk/Compliance = ML klasik; governance = aturan; DL/LLM sesuai porsi", "ml.py, sim.py"],
-    ["Bab 2: PEAS, klasifikasi lingkungan, rational agent, utility + constraint", "Bagian 2.3-2.4; a* = argmax U s.t. policy", "config.py, consortium.py"],
-    ["Bab 2: percept sequence, reactive vs deliberative, level otonomi, learning agent", "Monitor kondisi lini; hybrid; level 1-4; Learning Agent", "ml.py, rl.py, rl_sim.py"],
-    ["Bab 3: BDI, A = <G,B,I,M,C,R,P,T>, s(t+1)=F(s,o,a)", "Tabel agen (6.4), siklus kognitif (6.3)", "sim.py, consortium.py"],
-    ["Bab 3: skor hibrida h = g[alpha z + (1-alpha) 100 (1-p)], DSS + ML + policy engine", "Pemilihan carrier", "sim.py (book)"],
-    ["Bab 3: runtime, observability, audit trail, batas berhenti", "Audit log rantai-hash, jumlah pesan, anggaran lembur, eskalasi confidence", "messaging.py"],
-    ["Bab 4: MAS tuple, ACL, FSM, ontologi", "Message m = <s,r,p,c,o,l,id,t>, FSM Contract Net, ontologi export-mfg-v1", "messaging.py"],
-    ["Bab 4: Contract Net, negosiasi, task allocation, utility", "Kuota produsen (CNP), lini gudang, carrier, negosiasi Sales Agent", "consortium.py, negotiation.py, sales.py"],
-    ["Bab 4: trust eksponensial, HMAC, replay, capability, migrasi aman", "Quality score produsen, trust carrier, 7 uji serangan, gerbang migrasi", "messaging.py, mobile.py"],
-    ["Bab 4: speedup, R_sys, Jain, C_comm, KPI vector, smart manufacturing, supply chain MAS", "Bagian 3 (contoh 14) dan 7 (metrik sistem, fairness kuota)", "negotiation.py, experiments.py"],
-    ["Bab 5: mobile agent, serialisasi, migrasi, sandbox, RL mobility, layout Project #1", "Scout Agent; Q-learning; struktur laporan mengikuti layout Project #1", "mobile.py, rl.py"]]
+LECTURE_MAP = [["Materi kuliah", "Penerapan pada KCMAS", "Berkas kode"],
+    ["Bab 1: hibrida prediksi + aturan; model paling sederhana yang memadai", "Risk/Compliance = ML klasik; governance = aturan; DL/LLM sesuai porsi", "ml.py, sim.py"],
+    ["Bab 2: PEAS, klasifikasi lingkungan, rational agent", "Bagian 2.2-2.3", "config.py, consortium.py"],
+    ["Bab 2: reactive vs deliberative, level otonomi, learning agent", "Monitor kondisi lini; agen hibrida; level 1-4; Learning Agent", "ml.py, rl.py, rl_sim.py"],
+    ["Bab 3: BDI (belief, desire, intention), siklus kerja agen", "Tabel agen (5.2), siklus kerja (5.1)", "sim.py, consortium.py"],
+    ["Bab 3: keputusan hibrida (DSS + ML + kebijakan)", "Pemilihan carrier", "sim.py (book)"],
+    ["Bab 3: observability, audit trail, batas berhenti", "Audit log berantai-hash, jumlah pesan, anggaran lembur, eskalasi bila ragu", "messaging.py"],
+    ["Bab 4: pesan antaragen, protokol, ontologi", "Format pesan, urutan Contract Net divalidasi bus", "messaging.py"],
+    ["Bab 4: Contract Net, negosiasi, alokasi tugas", "Kuota produsen, lini gudang, carrier, negosiasi Sales Agent", "consortium.py, negotiation.py, sales.py"],
+    ["Bab 4: kepercayaan, keamanan pesan, migrasi aman", "Skor mutu produsen, kepercayaan carrier, 7 uji serangan, syarat migrasi", "messaging.py, mobile.py"],
+    ["Bab 4: metrik sistem (speedup, keadilan, biaya komunikasi), rantai pasok MAS", "Bagian 8 (metrik sistem, keadilan kuota)", "negotiation.py, experiments.py"],
+    ["Bab 5: mobile agent, RL, layout Project #1", "Scout Agent; Marketing dan Learning Agent; struktur laporan mengikuti layout Project #1", "mobile.py, rl.py, marketing.py"]]
 NEXT = [
-    "Kalibrasi dengan data nyata KrakaCoal (syarat pembayaran, harga beli per pemasok, tingkat gagal/reject, waktu balas) dan data pilot Xpora; ganti asumsi dengan estimasi.",
-    "Project #1 (tema domain enterprise): perluas ke Scout/Broker/Worker/Security (Bab 5), dashboard UI/UX (Command Center: peta kapasitas UMKM, status pesanan, QC), GNN untuk jaringan produsen-gudang-pelabuhan, dan perbandingan dengan sistem statis.",
-    "Integrasikan komponen yang dikembangkan tim Xpora: CNN QC (Grade A/B/Reject) menggantikan pass-rate statistik, LLM Virtual SDR menggantikan logika konsesi, dan WhatsApp Business API sebagai kanal agen produsen.",
-    "Perkuat RL (difference reward, replay terkontrol, safe-RL) dan bandingkan XGBoost untuk risiko roll-over; tambahkan uji drift dan retraining online.",
-    "Bandingkan dengan optimizer global (MILP/OR-Tools) sebagai batas atas optimalitas alokasi kuota.",
+    "Kalibrasi dengan data nyata KrakaCoal: syarat pembayaran, harga beli per produsen, tingkat gagal kirim dan reject, waktu balas produsen, dan performa tiap kanal iklan; ganti asumsi dengan estimasi.",
+    "Project #1 (tema domain enterprise): perluas ke Scout/Broker/Worker/Security (Bab 5), dashboard UI/UX (peta kapasitas produsen, status pesanan, uji mutu), dan perbandingan dengan sistem statis.",
+    "Implementasikan komponen yang saat ini hanya dimodelkan: CNN uji mutu, LLM untuk Sales dan Marketing dengan pemeriksa klaim, dan WhatsApp Business API sebagai kanal agen produsen.",
+    "Perkuat pembelajaran mesin (reward per agen, safe-RL) dan bandingkan XGBoost untuk risiko roll-over; tambahkan uji drift dan retraining online.",
+    "Bandingkan dengan optimizer global (MILP/OR-Tools) sebagai batas atas kualitas pembagian kuota.",
 ]
 
 
 # ============================================================ struktur artikel penelitian (tab dokumen dosen)
-ABSTRAK = ("Konsolidasi ekspor UMKM (mis. tempe dari 40 produsen rumahan) gagal terutama karena kapasitas produsen yang berubah-ubah, komunikasi yang manual, dan kepatuhan yang terlambat, sehingga pesanan 15-27 ton sering terlambat atau tidak lengkap. "
-           "Makalah ini merancang dan mengevaluasi XCMAS, sistem multi-agen (Contract Net, BDI, governance berlevel otonomi, mobile agent) untuk alur RFQ hingga pengapalan, dikalibrasi pada Xpora (tempe, reefer) dan KrakaCoal (arang, kontainer kering). "
-           f"Pada {R['n_scenarios']} skenario simulasi berpasangan, on-time-in-full naik dari {pc(h['xpora']['otif_s'],0)} (manual) ke {pc(h['xpora']['otif_c'],0)} (agen tunggal) dan {pc(h['xpora']['otif_m'],0)} (multi-agen) pada Xpora, serta {pc(h['kraka']['otif_s'],0)} ke {pc(h['kraka']['otif_c'],0)} dan {pc(h['kraka']['otif_m'],0)} pada KrakaCoal; "
+ABSTRAK = ("Mengumpulkan satu kontainer arang (12-27 ton) dari puluhan produsen kecil sering gagal karena kapasitas produsen yang berubah-ubah, komunikasi manual, dan dokumen yang terlambat. "
+           "Makalah ini merancang dan mengevaluasi KCMAS, sistem multi-agen (Contract Net, agen BDI, pengawas aturan berlevel otonomi, agen mobile, dan agen pemasaran digital) untuk alur dari iklan dan RFQ hingga kapal berangkat, dikalibrasi pada klaim operasional KrakaCoal. "
+           f"Pada {R['n_scenarios']} skenario simulasi berpasangan, order yang berangkat tepat waktu dan terisi penuh (OTIF) naik dari {pc(h['kraka']['otif_s'],0)} (manual) ke {pc(h['kraka']['otif_c'],0)} (agen tunggal) dan {pc(h['kraka']['otif_m'],0)} (multi-agen); "
            "sentuhan manusia turun dari sekitar seratus menjadi kurang dari dua per order. Keunggulan multi-agen atas agen tunggal kecil dan bergantung pada seberapa usang data pusat. Data sintetis dan berasumsi; validasi lapangan adalah langkah berikutnya.")
-KEYWORDS = "sistem multi-agen; Contract Net Protocol; konsorsium UMKM ekspor; rantai pasok; agen BDI; human-in-the-loop"
+KEYWORDS = "sistem multi-agen; Contract Net Protocol; rantai pasok arang; konsolidasi produsen; pemasaran digital; human-in-the-loop"
 
 IDENT = [["Butir", "Isi"],
     ["Nama / NIM", f"{NAMA} / {NIM}"],
     ["Program studi dan institusi", "Magister Kecerdasan Artifisial (S2), Universitas Gadjah Mada"],
     ["Mata kuliah / dosen", "Agentic Enterprise: AI Agentic Technology Systems for Digital Enterprise Ecosystem / Prof. Dr. Azhari MT"],
-    ["Bentuk kelompok", "Individu (penulis bergabung terlambat ke kelas); topik tidak diambil kelompok lain (bukan Customer Complaint, Procurement, Outsourcing, Bitcoin Trading, Customer Service, Software Developer Team)"],
+    ["Bentuk pengerjaan", "Individu (tidak ada tim). Topik tidak diambil kelompok lain (bukan Customer Complaint, Procurement, Outsourcing, Bitcoin Trading, Customer Service, Software Developer Team)."],
     ["Judul proyek", TITLE],
-    ["Konteks nyata", "Xpora (konsorsium ekspor UMKM tempe, pilot Jawa Tengah) dan KrakaCoal (trading arang), keduanya milik/terkait penulis"],
+    ["Kasus nyata", "KrakaCoal (krakacoal.com): bisnis ekspor arang yang sedang berjalan; penulis bekerja sebagai trader"],
     ["Fokus materi (sebelum UTS)", "Single agent / multi-agent; Proyek 1 nanti mengikuti domain enterprise yang diberikan dosen"],
     ["Repositori kode", REPO]]
 
-TUJUAN_UMUM = ("Merancang, mengimplementasikan, dan mengevaluasi sistem multi-agen yang mengotomasi sebagian besar alur order-to-shipment konsorsium UMKM ekspor, dengan manusia hanya pada keputusan berisiko, dan menunjukkan kapan arsitektur multi-agen lebih baik dari agen tunggal.")
+TUJUAN_UMUM = ("Merancang, mengimplementasikan, dan mengevaluasi sistem multi-agen yang mengotomasi sebagian besar alur pemasaran, penjualan, pemasokan, dan pengiriman ekspor arang, dengan manusia hanya pada keputusan berisiko, dan menunjukkan kapan arsitektur multi-agen lebih baik dari agen tunggal.")
 TUJUAN = [["Kode", "Tujuan khusus", "Ukuran keberhasilan", "Hasil (Bagian 8)"],
-    ["T1", "Membangun simulator yang dikalibrasi pada Xpora dan KrakaCoal untuk membandingkan manual, agen tunggal, dan multi-agen", "3 arsitektur pada skenario yang sama; 26 tes lulus; klaim KrakaCoal (MOQ, lead time) direproduksi", "tercapai"],
-    ["T2", "Meningkatkan OTIF dan margin dibanding proses manual", "OTIF dan margin per order lebih tinggi dari manual pada kedua profil", f"Xpora {pc(h['xpora']['otif_s'],0)} -> {pc(h['xpora']['otif_m'],0)}; KrakaCoal {pc(h['kraka']['otif_s'],0)} -> {pc(h['kraka']['otif_m'],0)}"],
-    ["T3", "Mengukur nilai desentralisasi (multi-agen vs agen tunggal) secara terisolasi", "selisih OTIF dan margin dengan CI 95%; sweep usangnya data", f"selisih OTIF {n(100*(h['xpora']['otif_m']-h['xpora']['otif_c']),0)} poin (Xpora), {n(100*(h['kraka']['otif_m']-h['kraka']['otif_c']),0)} poin (KrakaCoal); hilang bila data pusat akurat"],
-    ["T4", "Mengurangi beban manusia (sentuhan per order) dengan otonomi berlevel", "sentuhan manusia per order turun drastis", f"{n(h['xpora']['t_s'],0)} -> {n(h['xpora']['t_m'],1)} (Xpora)"],
-    ["T5", "Menjamin keamanan dan auditabilitas pesan antaragen", "7 uji serangan diblokir; audit log utuh", "7 dari 7 diblokir"],
-    ["T6", "Menunjukkan bahwa mesin yang sama berlaku lintas komoditas", "dua profil tanpa mengubah kode agen", "tercapai (tempe dan arang)"]]
+    ["T1", "Membangun simulator yang dikalibrasi pada klaim operasional KrakaCoal untuk membandingkan manual, agen tunggal, dan multi-agen", "Tiga sistem pada skenario yang sama; uji otomatis lulus; MOQ dan lead time situs tereproduksi", "tercapai"],
+    ["T2", "Meningkatkan OTIF dan margin dibanding proses manual", "OTIF dan margin per order lebih tinggi dari manual", f"OTIF {pc(h['kraka']['otif_s'],0)} -> {pc(h['kraka']['otif_m'],0)}; margin {usd(h['kraka']['mar_s'])} -> {usd(h['kraka']['mar_m'])} per order"],
+    ["T3", "Mengukur nilai desentralisasi (multi-agen vs agen tunggal) secara terisolasi", "Selisih OTIF dan margin dengan rentang 95%; sweep data usang", f"selisih OTIF {n(100*(h['kraka']['otif_m']-h['kraka']['otif_c']),0)} poin; hilang bila data pusat akurat"],
+    ["T4", "Mengurangi beban manusia dengan otonomi berlevel", "Sentuhan manusia per order turun drastis", f"{n(h['kraka']['t_s'],0)} -> {n(h['kraka']['t_m'],1)}"],
+    ["T5", "Menjamin keamanan dan auditabilitas pesan antaragen", "Tujuh uji serangan diblokir; audit log utuh", "7 dari 7 diblokir"],
+    ["T6", "Menambahkan agen pemasaran digital yang membagi anggaran iklan secara adaptif dan aman", "Lebih banyak RFQ berkualitas per dolar dibanding pembagian rata pada simulasi", f"+{n(MK['uplift_pct'],0)}% RFQ (asumsi; eksploratif)"]]
 HIPOTESIS = [
-    "H1: Agen tunggal maupun multi-agen meningkatkan OTIF secara signifikan dibanding proses manual (didukung).",
+    "H1: Agen tunggal maupun multi-agen meningkatkan OTIF secara berarti dibanding proses manual (didukung).",
     "H2: Multi-agen unggul dari agen tunggal hanya bila data kapasitas pusat usang (didukung: selisih menyempit menuju nol saat variasi kapasitas 0).",
-    "H3: Buffer over-allocation optimal berada pada rentang menengah, bukan nol atau maksimum (didukung: puncak 15-20%).",
+    "H3: Kelebihan pesanan (buffer) yang optimal berada pada rentang menengah, bukan nol atau maksimum (didukung: puncak 15-20%).",
     "H4: Otonomi berlevel menurunkan sentuhan manusia tanpa melewati kebijakan (didukung pada simulasi).",
+    "H5: Pembagian anggaran iklan adaptif menghasilkan lebih banyak RFQ berkualitas daripada pembagian rata bila kualitas kanal tidak diketahui (didukung pada simulasi berasumsi).",
 ]
 
 # ---- 5.1 alur end-to-end (mengacu fig_flow.png)
-FLOW_INTRO = ("Sistem ini pada dasarnya adalah 'tim kerja digital' untuk satu pesanan ekspor. Setiap peran diisi agen perangkat lunak yang saling berkirim pesan terstruktur; manusia hanya turun tangan pada titik oranye. "
-              "Contoh angka memakai pesanan KrakaCoal 25 ton: pembeli meminta 25 ton arang; sistem meminta 25 x 1,15 = 28,75 ton kepada produsen sebagai buffer, dan tidak ada produsen yang boleh mengambil lebih dari 30% (sekitar 8,6 ton), sehingga minimal 4 produsen terlibat.")
+FLOW_INTRO = ("Sistem ini pada dasarnya adalah 'tim kerja digital' untuk satu pesanan ekspor. Setiap peran diisi agen perangkat lunak yang saling berkirim pesan; agen tidak melakukan pekerjaan fisik. Yang fisik (memproduksi, menguji, mengemas, mengirim) tetap dikerjakan produsen, staf, dan mesin gudang; agen hanya mengatur, menawar, dan mencatat. "
+              "Manusia turun tangan hanya pada titik oranye. Contoh angka memakai order 25 ton: sistem meminta 25 x 1,15 = 28,75 ton kepada produsen sebagai cadangan, dan tidak ada produsen yang boleh mengambil lebih dari 30% (sekitar 8,6 ton), sehingga minimal 4 produsen terlibat.")
+EVENTBUS_TEXT = ("Event bus adalah jalur pesan bersama: semua agen saling berkirim pesan hanya lewat satu tempat ini, seperti grup chat yang terstruktur. Bus memeriksa siapa pengirimnya (tanda tangan digital), apakah urutan pesannya benar (mis. 'terima' tidak boleh datang sebelum 'minta tawaran'), dan mencatat semua pesan pada log yang tidak dapat diubah diam-diam. "
+                 "Pada WhatsApp, isi pesan yang sama dikirim sebagai template terstruktur.")
 FLOW_STEPS = [["No.", "Pelaku", "Apa yang terjadi", "Keputusan / aturan", "Hasil"],
-    ["1", "Pembeli", "Mengirim RFQ lewat portal atau WhatsApp: produk, kuantitas, pelabuhan tujuan, tenggat kirim.", "Isian wajib diperiksa skema (Bagian 5.3).", "RFQ tercatat dengan id unik."],
+    ["0", "Marketing & Ads Agent", "Membagi anggaran iklan ke kanal (Google, LinkedIn, marketplace, e-mail/WhatsApp, konten), membuat materi iklan, dan hanya mengiklankan produk yang kapasitasnya tersedia (sinyal dari Order Agent).", "Klaim harus sesuai spesifikasi dan sertifikat nyata; materi baru disetujui manusia.", "Calon pembeli mengirim RFQ."],
+    ["1", "Pembeli", "Mengirim RFQ lewat portal atau WhatsApp: produk, kuantitas, pelabuhan tujuan, tenggat kirim.", "Isian wajib diperiksa (Bagian 5.3).", "RFQ tercatat dengan id unik."],
     ["2", "Sales Agent (Virtual SDR)", "Mengkualifikasi pembeli, menegosiasikan harga dan syarat dengan konsesi bertahap, membuat Letter of Intent.", "Harga tidak boleh di bawah batas kebijakan; di luar batas dieskalasi ke manusia.", "LoI dan harga sepakat."],
-    ["3", "Manusia (admin)", "Memverifikasi bukti down payment. Ini human-in-the-loop yang disengaja pada desain Xpora (level otonomi 2).", "DP terverifikasi 0,3-1,2 hari.", "Order dirilis ke produksi."],
-    ["4", "Order Agent", "Melepas order dan menyiarkan Call for Proposal (CFP) ke produsen dengan kuantitas + buffer 15%.", "Batas konsentrasi 30%; produsen skor < 0,60 diblokir.", "CFP terkirim (WhatsApp template)."],
-    ["5", "Compliance Agent", "Paralel dengan produksi: klasifikasi HS (TF-IDF + k-NN), menyusun dokumen ekspor.", "Confidence HS < 0,6 diserahkan ke tim Compliance.", "Dokumen siap sebelum barang tiba."],
-    ["6", "Produsen UMKM (agen)", "Menawar: berapa kg, harga, kapan siap, berdasarkan kapasitas nyata hari itu.", "Bid lebih dari 6 jam diabaikan.", "Daftar bid."],
-    ["7", "Order Agent", "Memberi kuota menurut skor bid (harga, ETA, quality score) dengan batas konsentrasi.", "Dua putaran: target 6 hari, lalu seluruh jendela.", "Kontrak per produsen."],
-    ["8", "Produsen", "Memproduksi dan mengirim ke gudang konsorsium.", "Gagal kirim mengurangi quality score.", "Barang tiba."],
-    ["9", "QC Agent", "Menilai grade A/B/Reject; memperbarui quality score (T = 0,8 T + 0,2 q).", "Premium butuh yield >= 0,85.", "kg lolos QC."],
-    ["*", "Order Agent (keputusan)", "Apakah total kg lolos QC cukup? Bila belum: CFP susulan ke produsen lain (re-kontrak, buffer 5%, maks 4 putaran).", "Jika ya, lanjut ke gudang.", "Pemenuhan atau putaran baru."],
-    ["10", "Lini Gudang (agen)", "Job shop tiga tahap (QC-sortir, pack/vakum, stuffing) dengan dispatch critical ratio dan monitoring kondisi mesin.", "Lembur bila kritis (Learning Agent, anggaran 12 tahap).", "Kontainer siap."],
-    ["11", "Freight Agent", "Contract Net antar carrier; memilih dengan skor hibrida (harga, transit, keandalan, peluang roll-over).", "Tanpa air freight; carrier dipilih menurut skor hibrida.", "Booking kapal."],
-    ["12", "Scout Agent (mobile)", "Berpindah ke host carrier/pelabuhan membaca jadwal secara lokal, kembali membawa ~2 KB.", "Migrasi hanya bila trust >= 0,80 dan risiko <= 0,20; jika tidak, remote pull.", "Jadwal terverifikasi."],
-    ["13", "Manusia + Governance", "Persetujuan ekspor akhir: dokumen, biaya, dan risiko ditinjau ringkas.", "Level 2-3 menurut nilai order (> 75 ribu USD wajib persetujuan).", "Izin berangkat."],
-    ["14", "Pembeli", "Kapal berangkat dan barang diterima; hasil dicatat untuk umpan balik.", "Diskon shelf-life bila perishable terlambat.", "Order selesai; quality score, trust, dan Q-table diperbarui."]]
+    ["3", "Manusia (admin)", "Memverifikasi bukti down payment (human-in-the-loop, level otonomi 2).", "DP terverifikasi dalam 0,3-1,2 hari.", "Order dirilis ke produksi."],
+    ["4", "Order Agent", "Melepas order dan menyiarkan permintaan tawaran (CFP) ke produsen dengan kuantitas ditambah cadangan 15%.", "Batas 30% per produsen; produsen bermutu di bawah 0,60 diblokir.", "CFP terkirim (template WhatsApp)."],
+    ["5", "Compliance Agent", "Paralel dengan produksi: klasifikasi HS (ML teks) dan menyusun dokumen ekspor.", "Bila keyakinan HS di bawah 0,6, diserahkan ke tim Compliance.", "Dokumen siap sebelum barang tiba."],
+    ["6", "Producer Agent", "Menawar: berapa kg, harga, kapan siap, berdasarkan kapasitas nyata hari itu. Di dunia nyata produsen membalas lewat WhatsApp.", "Tawaran lebih dari 6 jam diabaikan.", "Daftar tawaran."],
+    ["7", "Order Agent", "Memberi kuota menurut skor tawaran (harga, waktu, skor mutu) dengan batas konsentrasi.", "Dua putaran: target 6 hari, lalu seluruh jendela waktu.", "Kontrak per produsen."],
+    ["8", "Produsen (fisik)", "Memproduksi arang dan mengirim ke gudang. Ini pekerjaan manusia; agen hanya memantau.", "Gagal kirim menurunkan skor mutu.", "Barang tiba."],
+    ["9", "QC Agent", "Mencatat hasil uji mutu (Grade A/B/Reject) dan memperbarui skor mutu produsen.", "Premium butuh tingkat kelolosan minimal 0,85.", "kg lolos uji mutu."],
+    ["*", "Order Agent (keputusan)", "Apakah total kg lolos cukup? Bila belum: CFP susulan ke produsen lain (re-kontrak, cadangan 5%, maksimal 4 putaran).", "Bila cukup, lanjut ke gudang.", "Pemenuhan atau putaran baru."],
+    ["10", "Warehouse Line Agent", "Mengatur tiga tahap (uji lab dan sortir, packing, stuffing) pada mesin dan staf gudang; mengurutkan job menurut kemendesakan dan memantau kondisi mesin.", "Lembur bila kritis (Learning Agent, anggaran 12 tahap).", "Kontainer siap."],
+    ["11", "Freight Agent", "Lelang antar carrier; memilih dengan skor gabungan (harga, waktu transit, keandalan, peluang ditinggal kapal).", "Tanpa air freight; carrier dipilih menurut skor.", "Booking kapal."],
+    ["12", "Scout Agent (mobile)", "Berpindah ke sistem carrier atau pelabuhan membaca jadwal secara lokal, kembali membawa sekitar 2 KB.", "Migrasi hanya bila kepercayaan minimal 0,80 dan risiko maksimal 0,20; jika tidak, tarik data jarak jauh.", "Jadwal terverifikasi."],
+    ["13", "Manusia + Governance", "Persetujuan ekspor akhir: dokumen, biaya, dan risiko ditinjau ringkas.", "Level 2-3 menurut nilai order (di atas USD 30 ribu wajib persetujuan).", "Izin berangkat."],
+    ["14", "Pembeli", "Kapal berangkat dan barang diterima; hasil dicatat untuk umpan balik.", "-", "Order selesai; skor mutu, kepercayaan, dan tabel belajar diperbarui."]]
 FLOW_WHY = [
-    "Mengapa banyak agen? Produsen, carrier, dan pembeli adalah pihak otonom yang tidak bisa diperintah pusat; mereka hanya bisa ditawari dan menawar.",
-    "Di mana 'kecerdasan' berada? (a) Compliance: klasifikasi HS berbasis ML; (b) Risk: regresi logistik peluang roll-over; (c) Order/Producer: penawaran berbasis skor dan kapasitas nyata; (d) Learning: Q-learning untuk lembur; (e) Sales: LLM sebagai lapisan bahasa.",
-    "Di mana manusia terlibat? Hanya verifikasi DP, HS confidence rendah, order bernilai tinggi, dan pengecualian; sisanya otomatis (Bagian 5.4).",
-    "Apa yang terjadi bila ada masalah? Produsen gagal kirim atau reject QC memicu putaran CFP baru; host tidak tepercaya memicu remote pull; pesan palsu ditolak oleh bus (Bagian 5.6).",
+    "Mengapa banyak agen? Produsen, carrier, dan pembeli adalah pihak otonom yang tidak bisa diperintah pusat; mereka hanya bisa diminta tawaran dan menawar.",
+    "Di mana kecerdasan buatan dipakai? (a) Compliance: klasifikasi HS berbasis ML; (b) Risk: regresi logistik untuk peluang ditinggal kapal; (c) Order/Producer: penawaran berbasis skor dan kapasitas nyata; (d) Learning: Q-learning untuk keputusan lembur; (e) Sales dan Marketing: LLM sebagai lapisan bahasa dan pembagi anggaran adaptif.",
+    "Di mana manusia terlibat? Hanya verifikasi DP, HS ragu-ragu, order bernilai tinggi, materi iklan dengan klaim baru, dan pengecualian; sisanya otomatis (Bagian 5.4).",
+    "Apa yang terjadi bila ada masalah? Produsen gagal kirim atau barang tidak lolos uji memicu putaran CFP baru; sistem carrier tidak tepercaya memicu penarikan data jarak jauh; pesan palsu ditolak oleh bus (Bagian 5.6).",
+]
+
+# ---- peta agen ke kode
+CODE_MAP = [["Agen", "Berkas kode", "Fungsi / kelas utama", "Diuji oleh"],
+    ["Marketing & Ads Agent", "marketing.py", "run_once (pembagi anggaran Thompson sampling), run, run_all", "keluaran outputs/marketing.json"],
+    ["Sales Agent (Virtual SDR)", "sales.py, negotiation.py", "run, worked_negotiation; concession, negotiate, nash_bargaining", "test_sdr_faster_and_converts_more"],
+    ["Order Agent", "consortium.py, sim.py", "Sourcing.run (putaran CFP), Sim.book (pemilihan carrier), Sim.start_docs", "test_all_orders_ship_and_accounting_consistent"],
+    ["Producer Agent", "consortium.py, data.py", "Sourcing._allocate (tawaran, skor, kuota); make_scenario (produsen sintetis)", "test_no_producer_exceeds_concentration_cap"],
+    ["QC Agent", "consortium.py", "Sourcing.run (hasil uji dan pembaruan skor mutu)", "test_trust_and_reliability_formulas"],
+    ["Warehouse Line Agent", "sim.py, ml.py", "Sim.dispatch, Sim.pick_next, Sim.step_machines; health_slope", "test_health_slope_positive_trend"],
+    ["Compliance Agent", "ml.py, sim.py", "HSClassifier, train_hs, selective_curve; Sim.hs_predict", "test_hs_catalog_contains_charcoal_and_tempe"],
+    ["Risk Agent", "ml.py, data.py", "LogisticModel, train_risk; roll_prob", "test_roll_prob_monotone"],
+    ["Freight Agent", "sim.py", "Sim.options, Sim.phat, Sim.book (lelang carrier)", "test_next_closing_and_penalty"],
+    ["Learning Agent", "rl.py, rl_sim.py, sim.py", "train_q, train_in_sim; Sim._expedite", "test_q_learning_lecture_example"],
+    ["Governance & Security Agent", "messaging.py, sim.py", "MessageBus (tanda tangan, nonce, kapabilitas, urutan pesan, audit log)", "test_signature_tamper_rejected, test_replay_rejected, test_audit_chain_detects_tampering"],
+    ["Scout Agent (mobile)", "mobile.py", "ScoutState, serialize, verify, query_carrier", "test_migration_rules, test_tampered_state_falls_back_to_remote_pull"],
+    ["Simulator dan eksperimen", "sim.py, experiments.py, demo.py", "Sim.run, Sim.summary; python -m kraka_mas.experiments; python -m kraka_mas.demo", "test_deterministic"],
 ]
 
 # ---- 5.3 kontrak input pengguna
 KONTRAK_IN = [["Pengguna", "Input (kontrak)", "Format dan validasi", "Bila tidak valid"],
-    ["Pembeli", "RFQ: produk, kuantitas (ton), incoterm, pelabuhan tujuan, tenggat kirim, harga target, sertifikat wajib", "Skema JSON; kuantitas >= MOQ profil (arang 12 t; tempe 15 t); tenggat >= lead time minimum; nilai enumerasi", "Ditolak dengan alasan; Sales Agent meminta perbaikan"],
-    ["Produsen UMKM", "Registrasi: kapasitas kg/hari, harga per kg, komoditas, sertifikat (NIB, halal, dll.); balasan CFP: kg, harga, ETA", "Template WhatsApp berisi maksimal 3 isian; angka positif dan <= kapasitas terdaftar x 1,5", "Balasan tidak sah dianggap tidak menawar; pengingat sekali"],
-    ["Admin", "Bukti DP; persetujuan (setuju / tolak / ubah); parameter kebijakan (buffer, cap konsentrasi, ambang skor, anggaran lembur)", "Kartu keputusan satu layar (Bagian 5.4); parameter bertipe dengan batas min-maks", "Nilai di luar batas ditolak; perubahan dicatat pada audit log"],
-    ["Tim Compliance", "Keputusan HS dan dokumen untuk kasus confidence rendah", "Kode HS 4-6 digit terdaftar pada katalog", "Kasus tetap terbuka dan naik prioritas"],
-    ["Sistem lain", "ERP/CRM, sensor CV, jadwal kapal", "Event bertipe dan bertanda tangan (HMAC)", "Ditolak oleh bus dan dicatat"]]
+    ["Pembeli", "RFQ: produk, kuantitas (ton), incoterm, pelabuhan tujuan, tenggat kirim, harga target, sertifikat wajib", "Isian bertipe; kuantitas minimal satu kontainer (12 ton untuk 20 ft, 25 ton untuk 40 ft); tenggat tidak kurang dari waktu produksi minimum", "Ditolak dengan alasan; Sales Agent meminta perbaikan"],
+    ["Produsen", "Pendaftaran: kapasitas kg/hari, harga per kg, jenis arang, sertifikat; balasan CFP: kg, harga, waktu siap", "Template WhatsApp berisi maksimal 3 isian; angka positif dan tidak melebihi kapasitas terdaftar x 1,5", "Balasan tidak sah dianggap tidak menawar; pengingat sekali"],
+    ["Admin", "Bukti DP; persetujuan (setuju / tolak / ubah); parameter kebijakan (buffer, batas konsentrasi, ambang skor mutu, anggaran lembur, anggaran iklan mingguan)", "Kartu keputusan satu layar (Bagian 5.4); parameter bertipe dengan batas minimum dan maksimum", "Nilai di luar batas ditolak; perubahan dicatat pada audit log"],
+    ["Admin pemasaran", "Daftar produk yang boleh diiklankan beserta spesifikasi dan sertifikat yang benar; anggaran mingguan; kata terlarang", "Daftar terstruktur; klaim iklan dicocokkan otomatis dengan daftar ini", "Klaim tidak cocok diblokir dan dikirim ke manusia"],
+    ["Tim Compliance", "Keputusan HS dan dokumen untuk kasus keyakinan rendah", "Kode HS terdaftar pada katalog", "Kasus tetap terbuka dan naik prioritas"],
+    ["Sistem lain", "Data ERP/CRM, sensor mesin, jadwal kapal", "Event bertipe dan bertanda tangan digital", "Ditolak oleh bus dan dicatat"]]
 KONTRAK_OUT = [["Penerima", "Keluaran (kontrak)", "Kapan"],
-    ["Pembeli", "LoI, status order (dikonfirmasi, produksi, stuffing, berangkat), dokumen ekspor, ETA", "Tiap perubahan status"],
-    ["Produsen", "CFP, kuota yang diberikan, hasil QC dan skor mutu", "Saat CFP, award, dan setelah QC"],
+    ["Pembeli", "LoI, status order (dikonfirmasi, produksi, stuffing, berangkat), dokumen ekspor, perkiraan tiba", "Tiap perubahan status"],
+    ["Produsen", "CFP, kuota yang diberikan, hasil uji mutu dan skor mutu", "Saat CFP, pemberian kuota, dan setelah uji"],
     ["Admin", "Kartu keputusan (rekomendasi, alasan, aksi default), ringkasan harian, peringatan risiko", "Bila ada pengecualian; ringkasan sekali sehari"],
-    ["Audit / regulator", "Log berantai-hash: siapa mengirim apa, kapan, dengan otoritas apa", "Selalu, tidak dapat diubah diam-diam"]]
+    ["Admin pemasaran", "Laporan mingguan per kanal (biaya, klik, RFQ berkualitas, biaya per RFQ) dan usulan pembagian anggaran", "Mingguan"],
+    ["Audit", "Log berantai-hash: siapa mengirim apa, kapan, dengan wewenang apa", "Selalu; tidak dapat diubah diam-diam"]]
 
 # ---- 5.4 cognitive overload
 COGNITIVE = [
-    ("Routing berdasarkan pengecualian", f"Sistem tidak meminta manusia menyetujui semua hal; hanya risiko tinggi, confidence rendah, atau nilai besar. Hasilnya sentuhan manusia per order turun dari {n(h['xpora']['t_s'],0)} (manual) menjadi {n(h['xpora']['t_m'],1)} (Xpora)."),
-    ("Kartu keputusan satu layar", "Setiap permintaan persetujuan berisi: rekomendasi sistem, tiga alasan utama, dampak biaya/risiko, dan aksi default. Admin cukup memilih Setuju / Ubah / Tolak."),
-    ("Ringkasan (digest) dan batching", "Notifikasi non-kritis dikumpulkan menjadi ringkasan harian; hanya peringatan kritis (mis. kapal akan ditinggalkan) yang dikirim langsung."),
-    ("Prioritas dan batas volume", "Antrean persetujuan diurutkan menurut nilai x urgensi; batas jumlah item aktif per admin, sisanya menunggu atau dieskalasi."),
-    ("Bahasa dan format sederhana", "Produsen UMKM hanya menerima template WhatsApp pendek dengan maksimal tiga isian dan angka baku; tanpa istilah teknis."),
-    ("Otonomi progresif", "Level otonomi naik hanya setelah tingkat kesalahan terukur di bawah ambang; semua aksi dapat dijelaskan lewat audit log."),
-    ("Fan-out terbatas", "CFP tidak disiarkan ke semua produsen pada skala besar, tetapi ke subset regional; agen tidak dibanjiri pesan (Bagian 8.5)."),
+    ("Routing berdasarkan pengecualian", f"Sistem tidak meminta manusia menyetujui semua hal; hanya risiko tinggi, keyakinan rendah, atau nilai besar. Hasilnya sentuhan manusia per order turun dari {n(h['kraka']['t_s'],0)} (manual) menjadi {n(h['kraka']['t_m'],1)}."),
+    ("Kartu keputusan satu layar", "Setiap permintaan persetujuan berisi rekomendasi sistem, tiga alasan utama, dampak biaya dan risiko, serta aksi default. Admin cukup memilih Setuju, Ubah, atau Tolak."),
+    ("Ringkasan (digest) dan pengumpulan", "Notifikasi tidak mendesak dikumpulkan menjadi ringkasan harian; hanya peringatan kritis (mis. kapal akan terlewat) yang dikirim langsung."),
+    ("Prioritas dan batas volume", "Antrean persetujuan diurutkan menurut nilai dan urgensi; ada batas jumlah item aktif per admin, sisanya menunggu atau dieskalasi."),
+    ("Bahasa dan format sederhana", "Produsen hanya menerima template WhatsApp pendek dengan maksimal tiga isian dan angka baku, tanpa istilah teknis."),
+    ("Otonomi bertahap", "Level otonomi dinaikkan hanya setelah tingkat kesalahan terukur di bawah ambang; semua aksi dapat dijelaskan lewat audit log."),
+    ("Batas penyiaran pesan", "CFP tidak disiarkan ke semua produsen pada skala besar, tetapi ke subset regional, sehingga agen tidak dibanjiri pesan (Bagian 8.5)."),
+    ("Iklan: persetujuan hanya untuk hal baru", "Marketing Agent memindahkan anggaran antar kanal secara otomatis dalam batas mingguan; manusia hanya menyetujui materi iklan dengan klaim baru."),
 ]
 
 # ---- 5.5 jadwal, approval, eskalasi
 JADWAL = [["Peristiwa", "Batas waktu / SLA", "Jika terlewat (eskalasi)", "Status"],
-    ["Balasan produsen terhadap CFP", f"median {C.REPLY_MEDIAN_H} jam; bid diterima sampai {C.CFP_DEADLINE_H:.0f} jam", "CFP susulan ke produsen berikutnya menurut skor", "dalam simulasi"],
-    ["Verifikasi DP oleh admin", f"{C.DP_VERIFY_DAYS[0]}-{C.DP_VERIFY_DAYS[1]} hari", "Pengingat ke admin cadangan", "dalam simulasi (SOURCE: desain Xpora)"],
-    ["Persetujuan order bernilai tinggi", f"{C.APPROVAL_DAYS} hari; wajib bila nilai > {C.APPROVAL_VALUE_USD:,} USD".replace(",", "."), "Order ditahan, bukan dieksekusi otomatis", "dalam simulasi"],
-    ["Produksi sasaran", f"{C.PROD_TARGET_DAYS:.0f} hari (target), lalu seluruh jendela", "Putaran kontrak baru, buffer 5%", "dalam simulasi"],
-    ["Klasifikasi HS", "otomatis; confidence < 0,6 ke tim Compliance", "Kasus dinaikkan prioritasnya", "dalam simulasi"],
-    ["Migrasi Scout", "trust host >= 0,80 dan risiko <= 0,20", "Fallback remote pull", "dalam simulasi"],
-    ["Ringkasan harian ke admin", "sekali sehari", "Peringatan kritis tetap langsung", "rancangan (belum disimulasikan)"]]
+    ["Balasan produsen terhadap CFP", f"median {C.REPLY_MEDIAN_H} jam; tawaran diterima sampai {C.CFP_DEADLINE_H:.0f} jam", "CFP susulan ke produsen berikutnya menurut skor", "dalam simulasi"],
+    ["Verifikasi DP oleh admin", f"{C.DP_VERIFY_DAYS[0]}-{C.DP_VERIFY_DAYS[1]} hari", "Pengingat ke admin cadangan", "dalam simulasi"],
+    ["Persetujuan order bernilai tinggi", f"{C.APPROVAL_DAYS} hari; wajib bila nilai di atas USD {C.APPROVAL_VALUE_USD:,}".replace(",", "."), "Order ditahan, tidak dieksekusi otomatis", "dalam simulasi"],
+    ["Target waktu produksi", f"{C.PROD_TARGET_DAYS:.0f} hari (target), lalu seluruh jendela waktu", "Putaran kontrak baru, cadangan 5%", "dalam simulasi"],
+    ["Klasifikasi HS", "otomatis; keyakinan di bawah 0,6 ke tim Compliance", "Kasus dinaikkan prioritasnya", "dalam simulasi"],
+    ["Migrasi Scout", "kepercayaan minimal 0,80 dan risiko maksimal 0,20", "Tarik data jarak jauh", "dalam simulasi"],
+    ["Ringkasan harian ke admin", "sekali sehari", "Peringatan kritis tetap dikirim langsung", "rancangan (belum disimulasikan)"],
+    ["Tinjauan anggaran iklan", "mingguan", "Kampanye dijeda bila biaya per RFQ melewati batas", "simulasi eksploratif"],
+    ["Persetujuan materi iklan baru", "1 hari kerja", "Materi tidak tayang sampai disetujui", "rancangan (belum disimulasikan)"]]
 APPROVAL_LEVELS = [["Level otonomi (Bab 2)", "Contoh keputusan", "Siapa yang menyetujui"],
-    ["4 Delegate", "Dispatch lini gudang, kuota pada konsentrasi normal, HS confidence >= 0,60", "Tidak ada; audit log"],
-    ["3 Supervise", "Lembur; carrier di bawah batas biaya", "Manusia dapat membatalkan dalam jendela waktu"],
-    ["2 Approve", "Verifikasi DP; HS confidence rendah; order > 75 ribu USD", "Admin / tim Compliance"],
-    ["1 Assist", "Belum dipakai pada mode rekomendasi", "Manusia memutuskan"]]
+    ["4 Delegate", "Pembagian kuota dalam batas, urutan kerja gudang, HS dengan keyakinan tinggi, pemindahan anggaran iklan antar kanal", "Tidak ada; audit log"],
+    ["3 Supervise", "Lembur dalam anggaran; carrier di bawah batas biaya", "Manusia dapat membatalkan dalam jendela waktu"],
+    ["2 Approve", "Verifikasi DP; HS keyakinan rendah; order bernilai tinggi; materi iklan dengan klaim baru", "Admin / tim Compliance / admin pemasaran"],
+    ["1 Assist", "Belum dipakai (mode rekomendasi)", "Manusia memutuskan"]]
 
 # ---- 5.6 koordinasi dan negosiasi
 NEGO = [
-    ("Contract Net (kuota produsen, lini gudang, carrier)", "Manajer menyiarkan CFP; kontraktor menjawab PROPOSE atau menolak; manajer ACCEPT/REJECT. FSM percakapan (IDLE, BIDDING, AWARDED, COMPLETED) menolak urutan pesan yang salah; tiap leg punya id percakapan sendiri."),
-    ("Skor penilaian bid", "Bid produsen dinilai dari harga, ETA, dan quality score: s_j = w_p(1 - p~_j) + w_e e_j + w_q q_j dengan bobot (0,3; 0,5; 0,2). Carrier dinilai dengan skor hibrida h = g[alpha z + (1 - alpha) 100 (1 - p)] (harga/transit + peluang roll-over)."),
-    ("Negosiasi harga (Sales Agent)", "Konsesi bergantung waktu dengan batas kebijakan; harga sepakat dibandingkan dengan titik Nash bargaining. Model kesabaran pembeli dan waktu balas manusia bersifat asumsi (eksploratif)."),
-    ("Penanganan konflik dan kegagalan", "Batas konsentrasi 30% mencegah satu produsen menguasai order; kegagalan kirim memicu re-kontrak; skor mutu memberi insentif keandalan; carrier tidak tepercaya diblokir oleh trust."),
-    ("Keamanan pesan", "HMAC-SHA256, nonce dan jendela waktu, capability, audit log berantai-hash; tujuh serangan diuji dan seluruhnya diblokir (Tabel keamanan)."),
+    ("Contract Net (kuota produsen, lini gudang, carrier)", "Manajer menyiarkan permintaan tawaran (CFP); kontraktor menjawab dengan tawaran atau menolak; manajer memilih dan mengirim ACCEPT atau REJECT. Bus memeriksa urutan pesan (IDLE, BIDDING, AWARDED, COMPLETED) dan menolak urutan yang salah; tiap leg punya id percakapan sendiri."),
+    ("Skor penilaian tawaran", "Tawaran produsen dinilai dari harga (30%), waktu siap (50% pada penilaian kecepatan/waktu), dan skor mutu (20%) sesuai bobot konfigurasi; carrier dinilai dengan skor gabungan harga/waktu transit dan peluang ditinggal kapal."),
+    ("Negosiasi harga (Sales Agent)", "Konsesi bertahap dengan batas kebijakan. Model kesabaran pembeli dan waktu balas manusia bersifat asumsi (eksploratif)."),
+    ("Penanganan konflik dan kegagalan", "Batas 30% mencegah satu produsen menguasai order; kegagalan kirim memicu re-kontrak; skor mutu memberi insentif keandalan; carrier tidak tepercaya diblokir."),
+    ("Keamanan pesan", "Tanda tangan digital (HMAC), nonce dan jendela waktu anti-ulang, izin per agen, audit log berantai-hash; tujuh serangan diuji dan seluruhnya diblokir."),
 ]

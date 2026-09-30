@@ -3,13 +3,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 import numpy as np
 import pytest
 
-from xpora_mas import config as C
-from xpora_mas.messaging import Message, MessageBus, SecurityError
-from xpora_mas import negotiation as N
-from xpora_mas import rl, mobile, ml, sales
-from xpora_mas.data import make_scenario, next_closing, roll_prob, HS_HEADINGS
-from xpora_mas.sim import Sim
-from xpora_mas.profiles import PROFILES
+from kraka_mas import config as C
+from kraka_mas.messaging import Message, MessageBus, SecurityError
+from kraka_mas import negotiation as N
+from kraka_mas import rl, mobile, ml, sales
+from kraka_mas.data import make_scenario, next_closing, roll_prob, HS_HEADINGS
+from kraka_mas.sim import Sim
+from kraka_mas.profiles import PROFILES
 
 
 # ---------- lecture worked examples must reproduce exactly
@@ -92,9 +92,9 @@ def test_hs_catalog_contains_charcoal_and_tempe():
     assert "4402" in HS_HEADINGS and "2106" in HS_HEADINGS
 
 def test_scenario_is_reproducible_and_producers_sane():
-    a, b = make_scenario(5, "xpora"), make_scenario(5, "xpora")
+    a, b = make_scenario(5, "kraka"), make_scenario(5, "kraka")
     assert [p.cap for p in a.producers] == [p.cap for p in b.producers]
-    assert all(100 <= p.cap <= 320 for p in a.producers) and all(0.6 < p.yield_ <= 0.99 for p in a.producers)
+    assert all(150 <= p.cap <= 600 for p in a.producers) and all(0.6 < p.yield_ <= 0.99 for p in a.producers)
 
 # ---------- SDR module
 def test_sdr_faster_and_converts_more():
@@ -107,7 +107,7 @@ def models():
     hs, _ = ml.train_hs(); risk, _ = ml.train_risk(); Q, _ = rl.train_q(episodes=20000)
     return dict(hs=hs, risk=risk, Q=Q, Q_env=Q)
 
-@pytest.mark.parametrize("profile", ["xpora", "kraka"])
+@pytest.mark.parametrize("profile", ["kraka"])
 def test_all_orders_ship_and_accounting_consistent(models, profile):
     sc = make_scenario(7, profile)
     for mode in ("static", "central", "mas"):
@@ -135,8 +135,16 @@ def test_mas_and_central_similar_when_no_staleness(models):
     assert abs(np.mean(diffs)) < 0.05
 
 def test_deterministic(models):
-    sc = make_scenario(5, "xpora")
+    sc = make_scenario(5, "kraka")
     assert Sim(sc, "mas", models).run()["margin"] == Sim(sc, "mas", models).run()["margin"]
 
 def test_no_security_violations_in_normal_run(models):
-    assert Sim(make_scenario(3, "xpora"), "mas", models).run()["rejected"] == 0
+    assert Sim(make_scenario(3, "kraka"), "mas", models).run()["rejected"] == 0
+
+
+# ---------- marketing agent (exploratory)
+def test_marketing_agent_beats_fixed_split_on_average():
+    from kraka_mas import marketing
+    r = marketing.run(n=150, seed=3)
+    assert r["agent"]["leads_mean"] > r["fixed"]["leads_mean"]
+    assert abs(sum(r["agent"]["share"]) - 1) < 1e-9
