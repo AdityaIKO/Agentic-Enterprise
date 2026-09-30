@@ -6,17 +6,12 @@ import pytest
 from kraka_mas import config as C
 from kraka_mas.messaging import Message, MessageBus, SecurityError
 from kraka_mas import negotiation as N
-from kraka_mas import rl, mobile, ml, sales
-from kraka_mas.data import make_scenario, next_closing, roll_prob, HS_HEADINGS
-from kraka_mas.sim import Sim
-from kraka_mas.profiles import PROFILES
+from kraka_mas import mobile, ml, catalog as K
+from kraka_mas.data import next_closing, roll_prob, HS_HEADINGS
+from kraka_mas.trader_sim import ARMS, make_scenario, simulate, floor_fob, _ladder_price, hs_error_rates
 
 
 # ---------- lecture worked examples must reproduce exactly
-def test_q_learning_lecture_example():
-    r = rl.td_example()
-    assert r["target"] == pytest.approx(8.6) and r["td_error"] == pytest.approx(6.6) and r["q_new"] == pytest.approx(3.32)
-
 def test_assignment_min_cost_lecture_example():
     best, arg = N.assignment_min_cost([[6, 3, 7], [4, 8, 5], [7, 6, 2]])
     assert best == 9 and arg == (1, 0, 2)
@@ -65,15 +60,15 @@ def test_audit_chain_detects_tampering():
 # ---------- mobile agent
 def test_migration_rules():
     rows = {r["host"]: r for r in mobile.host_table()}
-    assert rows["carrier_ColdLineA_edge"]["decision"].startswith("reject")      # trust .71 < .80 although latency is best
-    assert rows["carrier_ColdLineB_edge"]["decision"] == "migrate"
+    assert rows["forwarder_A_edge"]["decision"].startswith("reject")      # trust .71 < .80 although latency is best
+    assert rows["forwarder_B_edge"]["decision"] == "migrate"
 
 def test_tampered_state_falls_back_to_remote_pull():
     _, nb_ok, _, mig = mobile.query_carrier("port_community_node", 1, 10.0, 0.0)
     _, nb_bad, _, mig2 = mobile.query_carrier("port_community_node", 1, 10.0, 0.0, tamper=True)
     assert mig and not mig2 and nb_bad > 10 * nb_ok
 
-# ---------- domain maths and calibration to the KrakaCoal site
+# ---------- domain maths
 def test_next_closing_and_penalty():
     assert next_closing(10.2, 3.0) == 17.0
     assert C.late_penalty(10000, 0) == 0
@@ -83,63 +78,77 @@ def test_next_closing_and_penalty():
 def test_roll_prob_monotone():
     assert roll_prob(0, .8, 1, 0) > roll_prob(0, .2, 0, 4) and roll_prob(0, .5, 0, 1) > roll_prob(2, .5, 0, 1)
 
-def test_kraka_profile_matches_public_moq():
-    pf = PROFILES["kraka"]
-    assert min(pf.qty_options) == 12000 and max(pf.qty_options) == 27000      # 20 ft: 12-17 t ; 40 ft: 25-27 t
-    assert not pf.perishable
+def test_hs_catalog_has_charcoal_headings():
+    assert "440220" in HS_HEADINGS and "440290" in HS_HEADINGS
 
-def test_hs_catalog_contains_charcoal_and_tempe():
-    assert "4402" in HS_HEADINGS and "2106" in HS_HEADINGS
+# ---------- catalogue = owner's price sheet = web app seed
+def test_catalog_matches_webapp_seed():
+    import re
+    seed = (pathlib.Path(__file__).resolve().parents[1] / "webapp/src/lib/seed.ts").read_text()
+    for p in K.PRODUCTS:
+        m = re.search(r'id: "%s".*?listPriceUsdT: (\d+)' % p.pid, seed)
+        assert m and int(m.group(1)) == p.list_usd, p.pid
+    assert K.MOQ["20ft"] == (12, 17) and K.MOQ["40ft"] == (25, 27)
 
-def test_scenario_is_reproducible_and_producers_sane():
-    a, b = make_scenario(5, "kraka"), make_scenario(5, "kraka")
-    assert [p.cap for p in a.producers] == [p.cap for p in b.producers]
-    assert all(150 <= p.cap <= 600 for p in a.producers) and all(0.6 < p.yield_ <= 0.99 for p in a.producers)
+def test_every_product_has_positive_markup_below_list():
+    for p in K.PRODUCTS:
+        assert 0 < (p.list_usd - p.cost_usd) / p.cost_usd < 1.5
 
-# ---------- SDR module
-def test_sdr_faster_and_converts_more():
-    r = sales.run(1500, seed=1)
-    assert r["sdr"]["mean_hours"] < r["human"]["mean_hours"] and r["sdr"]["conversion"] > r["human"]["conversion"]
+def test_floor_rule_and_ladder_cap():
+    f = floor_fob(1350, 1450)                     # max(1350*1.05, 1450*0.985)
+    assert f == pytest.approx(max(1417.5, 1428.25))
+    p, r = _ladder_price(1450, f, 1450)
+    assert p == 1450 and r == 1                     # buyer who pays list gets list
+    assert _ladder_price(1450, f, f - 1) is None    # below the floor: no deal, never a concession below the cap
+    p2, r2 = _ladder_price(1450, f, f)
+    assert p2 >= f - 1e-9 and r2 == 4
 
 # ---------- simulator invariants
 @pytest.fixture(scope="module")
 def models():
-    hs, _ = ml.train_hs(); risk, _ = ml.train_risk(); Q, _ = rl.train_q(episodes=20000)
-    return dict(hs=hs, risk=risk, Q=Q, Q_env=Q)
+    hs, (X, y) = ml.train_hs(); risk, _ = ml.train_risk()
+    return dict(hs=hs, risk=risk, hs_rates=hs_error_rates(hs, X, y))
 
-@pytest.mark.parametrize("profile", ["kraka"])
-def test_all_orders_ship_and_accounting_consistent(models, profile):
-    sc = make_scenario(7, profile)
-    for mode in ("static", "central", "mas"):
-        r = Sim(sc, mode, models).run()
-        assert r["n"] == PROFILES[profile].n_orders and 0 <= r["otd"] <= 1 and 0 <= r["fill"] <= 1 and r["otif"] <= r["otd"] + 1e-9
-        assert min(r["freight"], r["penalty"], r["overtime"], r["hold"], r["human"], r["sourcing"]) >= 0
-        assert r["margin"] == pytest.approx(r["revenue"] - r["total_cost"])
-        assert r["audit_ok"]
+def test_scenario_reproducible():
+    a, b = make_scenario(5), make_scenario(5)
+    assert a.n == b.n and (a.d["t"] == b.d["t"]).all() and (a.d["prod"] == b.d["prod"]).all()
 
-def test_no_producer_exceeds_concentration_cap(models):
-    sc = make_scenario(3, "kraka")
-    s = Sim(sc, "mas", models); s.run()
-    for r in s.orders:
-        per = {}
-        for j, start, dlv, kg, passed, dfl, rnd in r.src["detail"]:
-            per[(j, rnd)] = per.get((j, rnd), 0) + kg          # awards inside one allocation request
-        assert max(per.values()) <= C.MAX_SHARE * r.o.qty * 1.3 * (1 + 1e-6)
-
-def test_mas_and_central_similar_when_no_staleness(models):
-    diffs = []
-    for s in range(12):
-        sc = make_scenario(s, "kraka", avail_low=1.0, reg_noise=0.0)
-        a = Sim(sc, "central", models, dict(avail_low=1.0)).run(); b = Sim(sc, "mas", models, dict(avail_low=1.0)).run()
-        diffs.append(b["fill"] - a["fill"])
-    assert abs(np.mean(diffs)) < 0.05
+def test_accounting_and_bounds(models):
+    for arm in ARMS:
+        r = simulate(make_scenario(7), arm, models)
+        assert r["orders"] <= r["inquiries"] and 0 <= r["win_rate"] <= 1
+        assert r["otif"] != r["otif"] or 0 <= r["otif"] <= 1
+        assert r["touches_per_order"] >= 0 and r["revenue"] >= 0
 
 def test_deterministic(models):
-    sc = make_scenario(5, "kraka")
-    assert Sim(sc, "mas", models).run()["margin"] == Sim(sc, "mas", models).run()["margin"]
+    sc = make_scenario(5)
+    assert simulate(sc, "mas", models)["margin"] == simulate(sc, "mas", models)["margin"]
 
-def test_no_security_violations_in_normal_run(models):
-    assert Sim(make_scenario(3, "kraka"), "mas", models).run()["rejected"] == 0
+def test_no_unapproved_below_floor_sales_when_cost_is_known(models):
+    for s in range(20):
+        r = simulate(make_scenario(s, cost_change=0.0), "mas", models)
+        assert r["below_floor"] == 0
+
+def test_injection_cannot_divert_money_with_human_gate(models):
+    tot = {a: 0.0 for a in ARMS}
+    for s in range(60):
+        sc = make_scenario(s, p_inj=0.3)
+        for a in ARMS:
+            tot[a] += simulate(sc, a, models)["diverted"]
+    assert tot["single"] > tot["mas"] and tot["b2"] > tot["mas"]
+
+def test_agents_answer_faster_than_manual(models):
+    m = np.mean([simulate(make_scenario(s), "manual", models)["ttq_h"] for s in range(30)])
+    a = np.mean([simulate(make_scenario(s), "mas", models)["ttq_h"] for s in range(30)])
+    assert a < m / 3
+
+def test_more_supplier_failures_hurt_otif(models):
+    lo = np.nanmean([simulate(make_scenario(s, fail_mult=0.0), "mas", models, dict(fail_mult=0.0))["otif"] for s in range(40)])
+    hi = np.nanmean([simulate(make_scenario(s, fail_mult=4.0), "mas", models, dict(fail_mult=4.0))["otif"] for s in range(40)])
+    assert hi < lo
+
+def test_hs_model_reasonable(models):
+    assert models["hs_rates"]["coverage"] > 0.6 and models["hs_rates"]["auto_err"] < 0.05
 
 
 # ---------- marketing agent (exploratory)

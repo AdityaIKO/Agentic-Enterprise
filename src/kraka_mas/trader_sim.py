@@ -104,7 +104,7 @@ def make_scenario(seed: int, scale: float = 1.0, p_inj: float = 0.04, fail_mult:
     d["dp_buyer"] = rng.uniform(1, 6, n)
     d["z_po"] = rng.normal(0, 0.5, n); d["z_dp"] = rng.normal(0, 0.5, n); d["z_pay"] = rng.normal(0, 0.6, n)
     d["sup_u"] = u(); d["sup_type_u"] = u(); d["sup_delay"] = rng.uniform(3, 10, n)
-    d["backup_u"] = u(); d["over_delay"] = rng.uniform(5, 10, n); d["spot_delay"] = rng.uniform(10, 20, n)
+    d["lead_u"] = u(); d["over_delay"] = rng.uniform(5, 10, n); d["spot_delay"] = rng.uniform(18, 30, n)
     d["detect_manual"] = rng.lognormal(np.log(4.0), 0.5, n); d["detect_week"] = rng.uniform(1, 8, n)
     d["doc_dur"] = rng.uniform(1.5, 3.0, n); d["doc_err_u"] = u(); d["hs_u"] = u(); d["hs_human_u"] = u()
     d["roll_u"] = rng.random((n, 3))
@@ -283,6 +283,9 @@ class Trader:
             elif a.cap_aware:
                 promise += float(d["over_delay"][i])             # the agent sees the load and promises a longer lead time
                 extra_delay = float(d["over_delay"][i])
+                if d["lead_u"][i] < 0.04 * extra_delay:          # ASSUMPTION: a longer promised lead time loses 4 % of buyers per extra day
+                    res.update(won=False, revenue=0.0, price=0.0, lost_reason="lead time")
+                    return res
             else:
                 extra_delay = float(d["over_delay"][i])          # unannounced delay at the supplier
                 informed = t_po + 0.5 * lead + (d["detect_manual"][i] if a.detect == "manual" else d["detect_week"][i])
