@@ -28,3 +28,7 @@ python docs/build_pdf.py && python docs/build_pptx.py
 - All operational data are synthetic; parameters are labelled SOURCE (krakacoal.com) or ASSUMPTION. Prices and payment terms are not published; the 40% down payment is an assumption.
 - The multi-agent advantage comes from live producer capacity vs. a stale registry; it vanishes when that variation is zero (see sweeps).
 - Sales and Marketing simulations are exploratory (assumption-driven); CNN quality control and LLM components are designed but not implemented.
+
+## Web app (deployable)
+`webapp/` is a Next.js app of software agents that help run a charcoal trading/production business day to day (RFQ, quoting,
+sourcing, own-kiln planning, documents, shipments, cash, marketing). See `webapp/README.md` to run and deploy it.
