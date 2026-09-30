@@ -1,202 +1,160 @@
-"""Run all experiments -> outputs/results.json (+ CSV).   python -m kraka_mas.experiments   (from src/)"""
-import csv, json, multiprocessing as mp, pathlib, sys, time
+"""Run all experiments on the trader model -> outputs/results.json (+ CSV).   python -m kraka_mas.experiments   (from src/)"""
+import csv, json, pathlib, time
+from dataclasses import replace
 import numpy as np
 
-from . import config as C
-from . import ml, rl, mobile, sales
-from . import negotiation as N
-from .data import make_scenario
+from . import ml, mobile, catalog as K
 from .messaging import Message, MessageBus, SecurityError
-from .sim import Sim
-from .profiles import PROFILES
+from .trader_sim import ARMS, make_scenario, simulate, hs_error_rates
 
 OUT = pathlib.Path(__file__).resolve().parents[2] / "outputs"
 OUT.mkdir(exist_ok=True)
-EVAL_SEEDS = range(0, 300)          # calibration used seeds 1000+, RL training 10000+ (never mixed with evaluation)
-MODES = ("static", "central", "mas")
-NAMES = {"static": "Manual (admin WhatsApp)", "central": "Single-agent (central core)", "mas": "Multi-agent (XCMAS)"}
-KEYS = ["otif", "otd", "fill", "avg_late", "margin", "margin_pct", "revenue", "total_cost", "sourcing", "freight", "penalty", "overtime", "hold",
-        "human", "touches", "msgs", "comm_s", "coord_peak", "peak_node", "hs_err", "jain", "jain_producers", "rounds", "producers_used",
-        "defaults", "rej_share", "surplus_waste", "arrival_lag", "shelf_disc", "makespan"]
-MODELS = {}
+EVAL_SEEDS = list(range(0, 300))          # risk-model training used seeds 1, HS training seed 0 (different data generators, never reused for evaluation)
+NAMES = {"manual": "Manual (owner/admin by WhatsApp)", "single": "Single agent (one context, stale registry)", "b2": "Multi-agent, no human gate (B2)",
+         "mas": "Multi-agent + human approvals (MAS)"}
+KEYS = ["orders", "win_rate", "margin", "margin_per_order", "revenue", "price_real", "below_floor", "leaks", "diverted", "attacks_hit", "otif", "late_days", "ttq_h", "cycle",
+        "touches_per_order", "fails", "recovered", "rolled", "doc_err", "parse_err", "cash_days", "penalty", "lost_price", "lost_slow", "exceptions"]
 
 
 def boot_ci(x, n=2000, seed=0):
-    x = np.asarray(x, float)
+    x = np.asarray(x, float); x = x[~np.isnan(x)]
+    if len(x) == 0:
+        return (float("nan"),) * 3
     rng = np.random.default_rng(seed)
     m = [rng.choice(x, len(x)).mean() for _ in range(n)]
     return float(x.mean()), float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))
 
 
-def build_models(q_episodes=400_000):
-    hs, (Xte, yte) = ml.train_hs()
-    risk, rstats = ml.train_risk()
-    qpath = OUT / "q_table.npy"
-    if qpath.exists():
-        Qenv = np.load(qpath); curve = json.loads((OUT / "q_curve.json").read_text())
-    else:
-        Qenv, curve = rl.train_q(episodes=q_episodes)
-        np.save(qpath, Qenv); (OUT / "q_curve.json").write_text(json.dumps(curve))
-    models = dict(hs=hs, risk=risk, Q=Qenv, Q_env=Qenv)
-    spath = OUT / "q_sim_table.npy"
-    if spath.exists():
-        Qsim = np.load(spath); scurve = json.loads((OUT / "q_sim_curve.json").read_text())
-    else:
-        from .rl_sim import train_in_sim
-        Qsim, scurve = train_in_sim(models, n_scenarios=4000)
-        np.save(spath, Qsim); (OUT / "q_sim_curve.json").write_text(json.dumps(scurve))
-    models["Q"] = Qsim                                   # deployed policy = learned inside the integrated simulator
-    return models, dict(hs_test=(Xte, yte), risk_stats=rstats, q_curve=curve, q_sim_curve=scurve)
+def batch(models, seeds, arm_key, arm=None, knobs=None, **scen):
+    kn = dict(knobs or {})
+    if "fail_mult" in scen:
+        kn["fail_mult"] = scen["fail_mult"]
+    return [simulate(make_scenario(s, **scen), arm_key, models, kn, arm) for s in seeds]
 
 
-def _one(a):
-    profile, seed, mode, opts, kw = a
-    return Sim(make_scenario(seed, profile, **kw), mode, MODELS, opts).run()
-
-
-class Runner:
-    def __init__(self, procs=4):
-        self.pool = mp.get_context("fork").Pool(procs)
-
-    def batch(self, profile, seeds, mode, opts=None, **kw):
-        return self.pool.map(_one, [(profile, s, mode, opts, kw) for s in seeds], chunksize=4)
-
-
-def agg(rows, keys):
+def agg(rows, keys=KEYS):
     return {k: boot_ci([r[k] for r in rows]) for k in keys}
 
 
-VARIANTS = {
-    "MAS (full)": {},
-    "- live bids (stale registry instead)": dict(live_bids=False),
-    "- quality-score prioritisation (price only)": dict(w_quality=0.0),
-    "- over-allocation buffer (0 %)": dict(buffer_first=0.0),
-    "over-allocation buffer 30 %": dict(buffer_first=0.30),
-    "- concentration cap (30 % per producer)": dict(max_share=1.0),
-    "- parallel documents": dict(parallel_docs=False),
-    "- ML HS classifier (manual HS)": dict(ml_hs=False),
-    "- ML risk model (advertised reliability)": dict(risk_model=False),
-    "carrier rule = expected cost": dict(carrier_rule="expected"),
-    "carrier rule = keep committed carrier": dict(carrier_rule="commit"),
-    "- condition monitoring": dict(cond_monitor=False),
-    "expedite = never overtime": dict(expedite="never"),
-    "expedite = tuned rule (slack<0)": dict(expedite="rule"),
-    "expedite = always overtime": dict(expedite="always"),
-    "expedite = Q trained in abstract env": dict(expedite="qenv"),
-    "- mobile scout (remote pull)": dict(mobile_scout=False),
-}
+def paired(a, b, k):
+    return boot_ci(np.array([y[k] - x[k] for x, y in zip(a, b)], float))
 
 
-def per_profile(R, profile, seeds, fast):
-    out = {}
-    batches = {m: R.batch(profile, seeds, m) for m in MODES}
-    out["main"] = {m: agg(batches[m], KEYS) for m in MODES}
-    diffs = {}
-    for m in ("central", "mas"):
-        for k in ("otif", "otd", "fill", "avg_late", "total_cost", "margin", "human"):
-            diffs[f"{m}_vs_static_{k}"] = boot_ci(np.array([b[k] - a[k] for a, b in zip(batches["static"], batches[m])]))
-    for k in ("otif", "fill", "total_cost", "margin", "rounds", "msgs", "arrival_lag"):
-        diffs[f"mas_vs_central_{k}"] = boot_ci(np.array([b[k] - a[k] for a, b in zip(batches["central"], batches["mas"])]))
-    out["paired_diffs"] = diffs
-    out["levels"] = {m: {str(k): float(np.mean([r["levels"][k] for r in batches[m]])) for k in (1, 2, 3, 4)} for m in ("central", "mas")}
-    out["scout"] = dict(bytes=float(np.mean([r["scout_bytes"] for r in batches["mas"]])), raw=float(np.mean([r["raw_bytes"] for r in batches["mas"]])),
-                        seconds=float(np.mean([r["scout_s"] for r in batches["mas"]])))
-    out["audit_ok_all"] = bool(all(r["audit_ok"] for r in batches["mas"]))
-    rows = [dict(profile=profile, mode=m, seed=seeds[i], **{k: r[k] for k in KEYS}) for m in MODES for i, r in enumerate(batches[m])]
-    out["_rows"] = rows
-    ab_seeds = seeds[:200] if not fast else seeds
-    ak = ["otif", "otd", "fill", "avg_late", "margin", "total_cost", "sourcing", "freight", "penalty", "overtime", "human", "msgs", "surplus_waste", "jain_producers", "rounds", "hs_err"]
-    out["ablation"] = {}
-    for name, o in VARIANTS.items():
-        rws = R.batch(profile, ab_seeds, "mas", o)
-        out["ablation"][name] = agg(rws, ak)
-        out["ablation"][name]["scout_MB"] = boot_ci([r["scout_bytes"] / 1e6 for r in rws])
-    sd = ab_seeds[:150]
-    out["robust"] = {}
-    for p in (0.0, 0.2, 0.5):
-        out["robust"][str(p)] = {m: agg(R.batch(profile, sd, m, None, p_coord_out=p), ["otif", "otd", "fill", "margin", "total_cost"]) for m in MODES}
-    out["staleness"] = {"avail": {}, "regnoise": {}}
-    for a in (1.0, 0.85, 0.7, 0.55, 0.4):
-        out["staleness"]["avail"][str(a)] = {m: agg(R.batch(profile, sd, m, dict(avail_low=a), avail_low=a), ["otif", "fill", "margin", "rounds", "msgs"]) for m in ("central", "mas")}
-    for nz in (0.0, 0.1, 0.2, 0.4):
-        out["staleness"]["regnoise"][str(nz)] = {m: agg(R.batch(profile, sd, m, None, reg_noise=nz), ["otif", "fill", "margin", "rounds"]) for m in ("central", "mas")}
-    out["buffer"] = {}
-    for b in (0.0, 0.05, 0.10, 0.15, 0.20, 0.30):
-        out["buffer"][str(b)] = agg(R.batch(profile, sd, "mas", dict(buffer_first=b)), ["otif", "fill", "margin", "surplus_waste", "sourcing"])
-    if True:
-        pf = PROFILES[profile]
-        out["scale"] = []
-        for f in ((1, 1), (4, 4), (10, 10), (20, 20)) if not fast else ((1, 1), (4, 4), (10, 10)):
-            n_o, n_p = pf.n_orders * f[0], pf.n_producers * f[1]
-            row = dict(n_orders=n_o, n_producers=n_p)
-            for m in ("central", "mas"):
-                rws = R.batch(profile, list(range(5000, 5003)), m, dict(cnp_fanout=25) if m == "mas" else None, n_orders=n_o, n_producers=n_p,
-                              machines_per_wc=max(2, int(round(2 * f[0]))))
-                row[m] = {k: float(np.mean([r[k] for r in rws])) for k in ("msgs", "coord_peak", "peak_node", "comm_s", "otif", "fill", "margin", "coord_total")}
-            out["scale"].append(row)
-    return out
+def build_models():
+    hs, (Xte, yte) = ml.train_hs()
+    risk, rstats = ml.train_risk()
+    rates = hs_error_rates(hs, Xte, yte)
+    return dict(hs=hs, risk=risk, hs_rates=rates), dict(hs_test=(Xte, yte), risk_stats=rstats)
+
+
+def ablations():
+    m = ARMS["mas"]
+    return {
+        "MAS (full)": dict(),
+        "- human approvals (= B2)": dict(arm=ARMS["b2"]),
+        "- live supplier price (stale cost)": dict(arm=replace(m, aware_cost=0.25)),
+        "- automatic backup supplier": dict(arm=replace(m, auto_backup=False)),
+        "- supplier load awareness": dict(arm=replace(m, cap_aware=False)),
+        "- live supplier status (weekly polling)": dict(arm=replace(m, detect="weekly")),
+        "- parallel documents": dict(arm=replace(m, parallel_docs=False)),
+        "- ML HS classifier (manual HS coding)": dict(arm=replace(m, ml_hs=False)),
+        "- roll-over risk model": dict(arm=replace(m, risk_model=False)),
+        "- owner exceptions below floor": dict(arm=replace(m, exceptions=False)),
+        "- typed RFQ parsing (raw text to one agent)": dict(arm=replace(m, inj=ARMS["single"].inj)),
+    }
 
 
 def main(fast=False):
-    global MODELS
     t0 = time.time()
-    MODELS, aux = build_models()
-    R = Runner()
-    res = dict(profiles={})
-    seeds = list(EVAL_SEEDS)[: (60 if fast else 300)]
-    res["n_scenarios"] = len(seeds)
-    allrows = []
-    for pf in ("kraka",):
-        r = per_profile(R, pf, seeds, fast)
-        allrows += r.pop("_rows")
-        res["profiles"][pf] = r
-        print(pf, "done", round(time.time() - t0), "s", flush=True)
+    models, aux = build_models()
+    seeds = EVAL_SEEDS[: (60 if fast else 300)]
+    res = dict(n_scenarios=len(seeds), arms=NAMES)
+    B = {a: batch(models, seeds, a) for a in ARMS}
+    res["main"] = {a: agg(B[a]) for a in ARMS}
+    diffs = {}
+    for a in ("single", "b2", "mas"):
+        for k in ("margin", "otif", "win_rate", "touches_per_order", "ttq_h", "late_days", "diverted", "below_floor"):
+            diffs[f"{a}_vs_manual_{k}"] = paired(B["manual"], B[a], k)
+    for k in ("margin", "otif", "win_rate", "diverted", "below_floor", "touches_per_order", "ttq_h"):
+        diffs[f"mas_vs_single_{k}"] = paired(B["single"], B["mas"], k)
+        diffs[f"mas_vs_b2_{k}"] = paired(B["b2"], B["mas"], k)
+    res["paired"] = diffs
+    rows = [dict(mode=a, seed=s, **{k: B[a][i][k] for k in KEYS}) for a in ARMS for i, s in enumerate(seeds)]
     with open(OUT / "per_scenario_results.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(allrows[0].keys())); w.writeheader(); w.writerows(allrows)
-
-    # ---- ML / RL (shared)
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
+    # ---- ablation (MAS minus one component), same scenarios
+    ab = {}
+    for name, o in ablations().items():
+        r = batch(models, seeds, "mas", arm=o.get("arm"))
+        ab[name] = agg(r, ["margin", "otif", "win_rate", "touches_per_order", "diverted", "below_floor", "doc_err", "recovered", "late_days", "ttq_h", "cash_days"])
+    res["ablation"] = ab
+    abs_ = {}                                                     # same ablation under stress: 4x supplier failures, 10 % injected inquiries, 3x volume
+    for name, o in ablations().items():
+        r = batch(models, seeds[:150], "mas", arm=o.get("arm"), fail_mult=4.0, p_inj=0.10, scale=3.0)
+        abs_[name] = agg(r, ["margin", "otif", "late_days", "recovered", "diverted"])
+    res["ablation_stress"] = abs_
+    # ---- stress 1: supplier failure
+    sf = {}
+    for fm in (0.0, 1.0, 2.0, 4.0):
+        sf[str(fm)] = {a: agg(batch(models, seeds[:200], a, fail_mult=fm), ["margin", "otif", "late_days", "recovered", "fails"]) for a in ARMS}
+    res["supplier_failure"] = sf
+    # ---- stress 2: RFQ prompt injection
+    inj = {}
+    for p in (0.0, 0.04, 0.10, 0.20):
+        inj[str(p)] = {a: agg(batch(models, seeds[:200], a, p_inj=p), ["margin", "diverted", "leaks", "attacks_hit", "attacks", "below_floor", "win_rate"]) for a in ARMS}
+    res["injection"] = inj
+    single_inj = {}
+    for s in (0.05, 0.10, 0.30, 0.60):
+        arm = replace(ARMS["single"], inj=(s, s, s))
+        single_inj[str(s)] = agg(batch(models, seeds[:200], "single", arm=arm, p_inj=0.10), ["margin", "diverted", "leaks", "attacks_hit"])
+    res["injection_single_success"] = single_inj
+    # ---- sensitivity
+    sens = {"cap": {}, "hard": {}, "cost_change": {}}
+    for cap in (0.0, 0.005, 0.015, 0.03, 0.05):
+        sens["cap"][str(cap)] = {a: agg(batch(models, seeds[:150], a, knobs=dict(max_disc=cap)), ["margin", "win_rate", "price_real", "below_floor"]) for a in ("manual", "b2", "mas")}
+    for h in (0.3, 0.65, 0.9):
+        sens["hard"][str(h)] = {a: agg(batch(models, seeds[:150], a, hard_buyers=h), ["margin", "win_rate", "price_real"]) for a in ("manual", "b2", "mas")}
+    for c in (0.0, 0.07, 0.2):
+        sens["cost_change"][str(c)] = {a: agg(batch(models, seeds[:150], a, cost_change=c), ["margin", "below_floor"]) for a in ARMS}
+    res["sensitivity"] = sens
+    # ---- scale (more inquiries per month against fixed supplier capacity)
+    sc = {}
+    for f in (1, 2, 4):
+        sc[str(f)] = {a: agg(batch(models, seeds[:100], a, scale=float(f)), ["orders", "margin", "otif", "late_days", "touches_per_order"]) for a in ("manual", "single", "mas")}
+    res["scale"] = sc
+    # ---- models
     Xte, yte = aux["hs_test"]
-    curve, preds = ml.selective_curve(MODELS["hs"], Xte, yte)
+    curve, preds = ml.selective_curve(models["hs"], Xte, yte)
     labs = sorted(set(yte)); cm = np.zeros((len(labs), len(labs)), int)
     for (p, c), y in zip(preds, yte):
         cm[labs.index(y), labs.index(p)] += 1
-    res["hs"] = dict(acc=float(np.mean([p == y for (p, c), y in zip(preds, yte)])), n_test=len(yte), labels=labs, confusion=cm.tolist(), selective=curve)
+    res["hs"] = dict(acc=float(np.mean([p == y for (p, c), y in zip(preds, yte)])), n_test=len(yte), labels=labs, confusion=cm.tolist(), selective=curve, rates=models["hs_rates"])
     res["risk"] = aux["risk_stats"]
-    Q = MODELS["Q_env"]; pol = rl.q_policy(Q)
-    res["rl"] = dict(curve=aux["q_curve"], curve_sim=aux["q_sim_curve"],
-                     env_return={"never": rl.evaluate_policy(lambda s, v, st: 0, 20000), "always": rl.evaluate_policy(lambda s, v, st: 1, 20000),
-                                 "rule (slack<0)": rl.evaluate_policy(lambda s, v, st: int(s < 0), 20000),
-                                 "rule (slack<1)": rl.evaluate_policy(lambda s, v, st: int(s < 1), 20000), "Q-learning": rl.evaluate_policy(pol, 20000)},
-                     td_example=rl.td_example())
-    # ---- security attacks
-    b = MessageBus(); b.register("order1", {"CFP", "ACCEPT"}); b.register("prod1", {"PROPOSE"})
+    # ---- message-bus attacks (HMAC, nonce, capability, FSM)
+    b = MessageBus(); b.register("rfq", {"CFP", "ACCEPT"}); b.register("supplier", {"PROPOSE"})
     attacks = {}
+
     def attempt(name, fn):
         try:
             fn(); attacks[name] = "ACCEPTED (bad)"
         except SecurityError as e:
             attacks[name] = f"blocked: {e}"
-    attempt("spoofed sender", lambda: b.send(Message("attacker", "prod1", "CFP", {}, "CNP-x/1", 1.0), 1.0))
-    m = Message("order1", "prod1", "CFP", {"kg": 1000}, "CNP-x/2", 1.0); b.sign(m); m.content["kg"] = 99999
+    attempt("spoofed sender", lambda: b.send(Message("attacker", "supplier", "CFP", {}, "CNP-x/1", 1.0), 1.0))
+    m = Message("rfq", "supplier", "CFP", {"kg": 1000}, "CNP-x/2", 1.0); b.sign(m); m.content["kg"] = 99999
     attempt("tampered payload (kg 1.000 -> 99.999)", lambda: b.verify(m, 1.0))
-    m2 = Message("order1", "prod1", "CFP", {}, "CNP-x/3", 1.0); b.send(m2, 1.0)
+    m2 = Message("rfq", "supplier", "CFP", {}, "CNP-x/3", 1.0); b.send(m2, 1.0)
     attempt("replayed message", lambda: b.verify(m2, 1.0))
-    attempt("capability abuse (producer issues ACCEPT)", lambda: b.send(Message("prod1", "order1", "ACCEPT", {}, "CNP-x/4", 1.0), 1.0))
-    attempt("protocol violation (ACCEPT without CFP)", lambda: b.send(Message("order1", "prod1", "ACCEPT", {}, "CNP-x/5", 1.0), 1.0))
-    old = Message("order1", "prod1", "CFP", {}, "CNP-x/6", 0.0); b.sign(old)
+    attempt("capability abuse (supplier side issues ACCEPT)", lambda: b.send(Message("supplier", "rfq", "ACCEPT", {}, "CNP-x/4", 1.0), 1.0))
+    attempt("protocol violation (ACCEPT without CFP)", lambda: b.send(Message("rfq", "supplier", "ACCEPT", {}, "CNP-x/5", 1.0), 1.0))
+    old = Message("rfq", "supplier", "CFP", {}, "CNP-x/6", 0.0); b.sign(old)
     attempt("stale message (timestamp outside window)", lambda: b.verify(old, 5.0))
-    attempt("tampered mobile-agent state", lambda: (_ for _ in ()).throw(SecurityError("state hash mismatch -> migration refused, remote pull")) if not mobile.query_carrier("port_community_node", 1, 10, 0, tamper=True)[3] else None)
     res["attacks"] = attacks
     res["migration_table"] = mobile.host_table()
-    res["sales"] = sales.run(6000)
-    res["sales_worked"] = sales.worked_negotiation()
-    res["formulas"] = dict(speedup=N.speedup(100, 29, 4), r_sys=N.r_sys([0.9, 0.9, 0.9]), comm_cost_ms=1000 * N.comm_cost(1, 8 * 1024, 8e6, 0.020),
-                           jain_equal=N.jain([1, 1, 1, 1]), jain_skew=N.jain([4, 1, 1, 1]))
     res["runtime_s"] = time.time() - t0
     (OUT / "results.json").write_text(json.dumps(res, indent=1, default=float))
-    R.pool.close()
     return res
 
 
 if __name__ == "__main__":
+    import sys
     main(fast="--fast" in sys.argv)
