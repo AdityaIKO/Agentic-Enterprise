@@ -1,0 +1,56 @@
+{
+  "n_raw": 2060,
+  "n_clean": 1999,
+  "n_train": 1393,
+  "n_test": 606,
+  "base_rate": 0.19259629814907453,
+  "auc_agent_model": 0.852927896637955,
+  "auc_sklearn_check": 0.8532404834676298,
+  "auc_manual_points_baseline": 0.8140803000833565,
+  "log_loss": 0.3504917952346958,
+  "lift_top10pct": 3.6805084745762713,
+  "lift_top10pct_baseline": 3.594915254237288,
+  "at_0.5": {
+    "precision": 0.7258064516129032,
+    "recall": 0.3813559322033898,
+    "f1": 0.4999999999999999
+  },
+  "at_0.3": {
+    "precision": 0.5630252100840336,
+    "recall": 0.5677966101694916,
+    "f1": 0.5654008438818565
+  },
+  "tier_conversion_test": {
+    "count": {
+      "cold": 403,
+      "hot": 62,
+      "warm": 141
+    },
+    "mean": {
+      "cold": 0.067,
+      "hot": 0.726,
+      "warm": 0.326
+    }
+  },
+  "weights": {
+    "log_employees": -0.038,
+    "title_level": 0.092,
+    "web_visits": 0.21,
+    "pricing_views": 0.641,
+    "email_open_rate": 0.195,
+    "demo_requested": 0.632,
+    "days_since_activity": -0.531,
+    "source_score": 0.213,
+    "icp_fit": 0.608,
+    "text_intent": 0.194
+  },
+  "bias": -1.943,
+  "log": [
+    "EnrichmentAgent: removed 61 duplicates, imputed 324 missing values",
+    "ICPFitAgent: icp_fit computed, mean=0.385",
+    "IntentAgent: text_intent computed, mean=0.178",
+    "ScoringAgent: trained on 1393 leads",
+    "ScoringAgent: tiers {'cold': 1340, 'warm': 463, 'hot': 196}",
+    "ActionAgent: actions assigned {'Add to low-touch newsletter': 1340, 'Nurture: case-study email + retarget': 344, 'Assign to AE: call within 24h': 143, 'Nurture: webinar invite': 119, 'Assign to AE: book demo': 53}"
+  ]
+}
