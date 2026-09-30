@@ -35,7 +35,7 @@ class Message:
     content: dict
     conv_id: str
     t: float
-    ontology: str = "export-mfg-v1"
+    ontology: str = "charcoal-trade-v1"
     language: str = "json"
     nonce: int = 0
     sig: str = ""

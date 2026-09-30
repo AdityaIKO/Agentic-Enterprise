@@ -1,4 +1,4 @@
-"""Build docs/Laporan_Tugas1.pdf from content.py + formulas.py  (python docs/build_pdf.py)"""
+"""Build docs/Laporan_Tugas1.pdf from content.py  (python docs/build_pdf.py)"""
 import pathlib, sys
 import matplotlib
 matplotlib.use("Agg")
@@ -90,6 +90,7 @@ class Doc(BaseDocTemplate):
 
 
 s = []
+B = lambda items: [Paragraph("- " + esc(x), bul) for x in items]
 # ================================================================= cover
 s += [Spacer(1, 1.0 * cm), Paragraph(esc(K.TITLE), ParagraphStyle("t", fontName="DVB", fontSize=23, leading=29, textColor=Cc(NAVY))),
       Spacer(1, .25 * cm), Paragraph(esc(K.SUBTITLE), ParagraphStyle("t2", fontName="DV", fontSize=11.5, leading=16, textColor=Cc(TEAL))),
@@ -101,145 +102,139 @@ toc = TableOfContents(); toc.levelStyles = [ParagraphStyle("t1", fontName="DVB",
                                               ParagraphStyle("t2", fontName="DV", fontSize=8, leading=11.5, leftIndent=14, textColor=Cc("#374151"))]
 s += [Paragraph("Daftar Isi", h1), toc, PageBreak()]
 s += [Paragraph("Abstrak", h1), P(K.ABSTRAK), P("Kata kunci: " + K.KEYWORDS, small), Paragraph("Ringkasan Eksekutif", h2)] + [P(t) for t in K.EXEC]
-kpi = [["Metrik (rata-rata 300 skenario)", "Manual", "Agen tunggal", "Multi-agen"]]
-for pf, nm in (("kraka", "KrakaCoal"),):
-    for lab, key, f in (("OTIF", "otif", K.pc), ("Fill rate", "fill", K.pc)):
-        kpi.append([f"{nm}: {lab}"] + [f(K.mv(pf, m, key)) for m in K.MODES])
-    kpi.append([f"{nm}: margin per order"] + [K.usd(K.per_order(pf, m, "margin")) for m in K.MODES])
-    kpi.append([f"{nm}: sentuhan manusia per order"] + [K.n(K.mv(pf, m, "touches"), 1) for m in K.MODES])
-s += [Spacer(1, 4), table(kpi, [6.4, 3.5, 3.5, 3.6]), Spacer(1, 6), Paragraph("Cara membaca tabel", h3), table(K.METRIK_DEF, [4.2, 12.8], small_=True), Spacer(1, 6)]
-s += [Paragraph("Peta Jawaban Tugas 1", h2), table([["Instruksi Tugas 1", "Jawaban", "Lokasi"]] + [list(r) for r in K.TUGAS_MAP], [4.6, 10.0, 2.4]), PageBreak()]
+kpi = [["Metrik (rata-rata 300 skenario, per bulan)"] + [K.ARM_NAME[a] for a in K.ARMS_K]]
+kpi.append(["Margin bersih (USD)"] + [K.usd(K.mv(a, "margin")) for a in K.ARMS_K])
+kpi.append(["Tepat waktu (OTIF)"] + [K.pc(K.mv(a, "otif"), 0) for a in K.ARMS_K])
+kpi.append(["Waktu ke penawaran pertama (jam)"] + [K.n(K.mv(a, "ttq_h"), 1) for a in K.ARMS_K])
+kpi.append(["Sentuhan manusia per order"] + [K.n(K.mv(a, "touches_per_order"), 1) for a in K.ARMS_K])
+kpi.append(["Dana dialihkan serangan (USD)"] + [K.n(K.mv(a, "diverted"), 0, "", True) for a in K.ARMS_K])
+s += [Spacer(1, 4), table(kpi, [5.0, 3.0, 3.0, 3.0, 3.0]), Spacer(1, 6), Paragraph("Cara membaca tabel", h3), table(K.METRIK_DEF, [4.2, 12.8], small_=True), Spacer(1, 6)]
+s += [Paragraph("Peta Jawaban Tugas 1", h2), table([["Instruksi Tugas 1", "Jawaban", "Lokasi"]] + [list(r) for r in K.TUGAS_MAP], [4.6, 10.0, 2.4]),
+      Spacer(1, 6), Paragraph("Peta ke tab template Proyek 1", h3), table([["Tab template", "Lokasi pada laporan"]] + [list(r) for r in K.TEMPLATE_MAP], [12.0, 5.0], small_=True), PageBreak()]
 
-# ================================================================= 1 identitas
+# ================================================================= 1-2
 s += [Paragraph("1. Identitas Kelompok", h1), table(K.IDENT, [4.6, 12.4])]
-
-# ================================================================= 2 problem
 s += [Paragraph("2. Problem Statement", h1), Paragraph("2.1 Konteks dan pernyataan masalah", h2)] + [P(t) for t in K.PROBLEM]
-s += [Paragraph("2.2 Klasifikasi lingkungan (Tabel 2.1 Bab 2)", h2), table(K.ENV_TABLE, [3.0, 3.6, 10.4]),
-      P("Lingkungan yang partially observable, stochastic, dynamic, dan multi-actor menuntut memori, penalaran probabilistik, perencanaan, koordinasi, dan pembelajaran (Bab 2); ini dasar memilih sistem agen cerdas.", small)]
-s += [Paragraph("2.3 PEAS", h2), table(K.PEAS, [2.6, 14.4])]
-s += [Paragraph("2.4 KPI dan posisi terhadap solusi yang ada", h2),
-      P("Vektor KPI sistem (Bab 4): K = [latensi, throughput, biaya, ketahanan, utilitas, trust]. Pada KCMAS: latensi = waktu komunikasi dan lead time sourcing; throughput = order per periode; biaya = J; ketahanan = perubahan kinerja saat gangguan; utilitas = margin dan skor hibrida; trust = quality score produsen dan trust carrier."),
-      P(K.SOTA)]
+s += [Paragraph("2.2 Klasifikasi lingkungan (Tabel 2.1 Bab 2)", h2), table(K.ENV_TABLE, [3.0, 3.6, 10.4]), Paragraph("2.3 PEAS", h2), table(K.PEAS, [2.6, 14.4]),
+      Paragraph("2.4 Posisi terhadap solusi yang ada", h2), P(K.SOTA_POS)]
 
 # ================================================================= 3 SOTA
 s += [Paragraph("3. State of the Art (SOTA) dan Landasan Penelitian", h1),
-      P("Bagian ini memetakan penelitian terdahulu pada jurnal bereputasi (Q1-Q3, per SJR; lihat catatan verifikasi) yang mendasari KCMAS, beserta celah yang diisi. Setiap referensi memiliki DOI. Tiga penelitian pertama pada tiap subbagian memenuhi butir Tugas 1."),
-      Paragraph("3.1 Tiga penelitian serupa (masalah: logistik ekspor, kepatuhan, penjadwalan)", h2)]
+      P("Penelitian terdahulu pada jurnal bereputasi (perkiraan Q1-Q3; lihat catatan verifikasi) yang mendasari KCMAS beserta celah yang diisi. Setiap referensi memiliki DOI."),
+      Paragraph("3.1 Tiga penelitian dengan topik serupa (logistik ekspor, kepatuhan, ketahanan)", h2)]
 for ref, ring, rel, url in K.RELATED_PROBLEM:
     s += [KeepTogether([P(ref), P("Ringkasan: " + ring, small), P("Relevansi dan celah: " + rel, small), P("Tautan: " + url, small), Spacer(1, 3)])]
 s += [Paragraph("3.2 Tiga penelitian yang memakai agen cerdas", h2)]
 for ref, ring, rel, url in K.RELATED_AGENT:
     s += [KeepTogether([P(ref), P("Ringkasan: " + ring, small), P("Relevansi dan celah: " + rel, small), P("Tautan: " + url, small), Spacer(1, 3)])]
-s += [Paragraph("3.3 Tabel SOTA lengkap (14 referensi)", h2),
-      table(K.SOTA_TABLE, [4.6, 2.3, 2.9, 7.2], small_=True), Paragraph("Catatan verifikasi referensi", h3), P(K.CITE_NOTE),
-      Paragraph("3.4 Celah penelitian dan kontribusi", h2)] + [Paragraph("- " + esc(t), bul) for t in K.SOTA_GAP]
+s += [Paragraph("3.3 Tabel SOTA lengkap (14 referensi)", h2), table(K.SOTA_TABLE, [4.6, 2.3, 2.9, 7.2], small_=True), Paragraph("Catatan verifikasi referensi", h3), P(K.CITE_NOTE),
+      Paragraph("3.4 Celah penelitian dan kontribusi", h2)] + B(K.SOTA_GAP)
 
 # ================================================================= 4 tujuan
 s += [Paragraph("4. Tujuan Proyek", h1), Paragraph("4.1 Tujuan umum", h2), P(K.TUJUAN_UMUM), Paragraph("4.2 Tujuan khusus dan ukuran keberhasilan", h2),
-      table(K.TUJUAN, [1.2, 6.2, 4.8, 4.8], small_=True), Paragraph("4.3 Hipotesis", h2)] + [Paragraph("- " + esc(t), bul) for t in K.HIPOTESIS]
+      table(K.TUJUAN, [1.2, 6.0, 4.6, 5.2], small_=True), Paragraph("4.3 Hipotesis", h2)] + B(K.HIPOTESIS)
 
 # ================================================================= 5 desain
 s += [PageBreak(), Paragraph("5. Desain Sistem Multi-Agent", h1), Paragraph("5.1 Arsitektur dan alur end-to-end", h2), P(K.FLOW_INTRO),
-      fig("fig_flow.png", 17.0, "Gambar 1. Alur end-to-end KCMAS per lajur pelaku. Nomor menunjuk baris pada Tabel 5.1; kotak oranye = keputusan manusia; garis merah = putaran re-kontrak; garis putus-putus = jalur paralel (dokumen)."),
-      table(K.FLOW_STEPS, [0.9, 2.6, 6.2, 4.2, 3.1], small_=True), Spacer(1, 4), Paragraph("Cara membaca sistem ini", h3)] + [Paragraph("- " + esc(t), bul) for t in K.FLOW_WHY]
-s += [Paragraph("Apa itu event bus?", h3), P(K.EVENTBUS_TEXT), fig("fig_architecture.png", 17, "Gambar 2. Arsitektur KCMAS: manusia, governance (bidang kontrol), event bus, agen internal, dan organisasi/sistem eksternal."),
-      fig("fig_cnp_sequence.png", 16, "Gambar 3. Contract Net Protocol untuk kuota produsen UMKM; tiap leg divalidasi FSM dan ditandatangani HMAC."),
-      fig("fig_bdi_cycle.png", 15, "Gambar 4. Siklus kerja tiap agen (BDI) dengan umpan balik dari hasil aksi.")]
-s += [Paragraph("5.2 Spesifikasi agen, komponen internal, dan pilihan AI/ML/DL", h2), P("Semua agen adalah perangkat lunak. Tiap agen dijelaskan dengan pola BDI (belief: apa yang ia ketahui; desire: apa yang ingin dicapai; intention: apa yang ia putuskan lakukan) beserta komponen, masukan/keluaran, metode, dan tingkat otonominya."),
-      table(K.AGENTS, [2.0, 1.7, 3.6, 3.6, 2.4, 1.9, 1.8], small_=True), Paragraph("Metode AI / ML / DL / RL / LLM dan alasan pemilihan", h3), P(K.CRIT_NOTE), table(K.PORTFOLIO, [2.3, 2.8, 2.0, 5.0, 4.9], small_=True),
-      Paragraph("Peta agen ke kode", h3), P("Tiap agen diimplementasikan pada berkas berikut (repositori src/kraka_mas). Bila ditanya tentang kode sebuah agen, gunakan tabel ini sebagai rujukan:"), table(K.CODE_MAP, [3.4, 3.2, 6.6, 3.8], small_=True),
-      fig("fig_sales.png", 10.5, "Gambar 5. Sales Agent (eksploratif, asumsi waktu balas dan kesabaran pembeli): konversi RFQ dan waktu ke harga sepakat.")]
-s += [Paragraph("5.3 Kontrak input dan output pengguna", h2), P("Kontrak ini menetapkan apa yang wajib diberikan pengguna dan apa yang dijamin diterima, sehingga agen dapat memvalidasi masukan secara otomatis dan pengguna tidak perlu memahami mekanisme internal."),
-      table(K.KONTRAK_IN, [2.4, 5.6, 5.4, 3.6], small_=True), Spacer(1, 4), table(K.KONTRAK_OUT, [3.0, 10.0, 4.0], small_=True),
-      Paragraph("5.4 Menghindari cognitive overload pada manusia", h2), P("Pengguna manusia (admin, tim Compliance, penyelia gudang) adalah sumber daya paling langka pada UMKM. Desain berikut menjaga beban kognitif rendah:")]
+      fig("fig_flow.png", 17.0, "Gambar 1. Alur end-to-end per lajur pelaku. Kotak abu-abu = keputusan pemilik; garis putus-putus = jalur pengecualian; garis titik = jalur paralel."),
+      table(K.FLOW_STEPS, [0.9, 2.6, 6.2, 4.2, 3.1], small_=True), Spacer(1, 4), Paragraph("Cara membaca sistem ini", h3)] + B(K.FLOW_WHY)
+s += [Paragraph("Apa itu event bus?", h3), P(K.EVENTBUS_TEXT), fig("fig_architecture.png", 17, "Gambar 2. Arsitektur KCMAS: pemilik, governance, event bus, sepuluh agen, dan pihak nyata di luar sistem."),
+      fig("fig_cycle.png", 16, "Gambar 3. Siklus kerja tiap agen: amati, periksa aturan, usulkan, persetujuan, jalankan, catat."),
+      fig("fig_ladder.png", 12, "Gambar 4. Tangga konsesi Coconut Premium: empat rung dari harga daftar ke lantai; tidak ada konsesi di bawah lantai."),
+      fig("fig_failure.png", 15, "Gambar 5. Linimasa pemulihan saat pemasok utama tidak mengirim (Premium 40 ft): deteksi dan keputusan yang lebih cepat pada multi-agen.")]
+s += [Paragraph("5.2 Spesifikasi agen, komponen internal, dan pilihan AI/ML/DL", h2), P("Semua agen adalah perangkat lunak. Tiap agen dijelaskan dengan pola BDI (belief, desire, intention), komponen internal, masukan dan keluaran, metode, dan tingkat otonomi."),
+      table(K.AGENTS, [2.0, 1.7, 3.6, 3.6, 2.4, 1.9, 1.8], small_=True), Paragraph("Metode AI / ML / DL / LLM dan alasan pemilihan", h3), P(K.CRIT_NOTE), table(K.PORTFOLIO, [2.3, 2.8, 2.0, 5.0, 4.9], small_=True),
+      Paragraph("Peta agen ke kode", h3), P("Setiap agen ada di aplikasi web (webapp/src/lib/agents) dan, bila relevan, di simulator dan riset (src/kraka_mas). Tabel ini adalah rujukan bila ditanya kode tiap agen:"), table(K.CODE_MAP, [3.2, 4.2, 4.6, 5.0], small_=True)]
+s += [Paragraph("5.3 Kontrak input dan output pengguna", h2), P("Kontrak ini menetapkan apa yang wajib diberikan pengguna dan apa yang dijamin diterima."),
+      table(K.KONTRAK_IN, [2.0, 5.2, 6.0, 3.8], small_=True), Spacer(1, 4), table(K.KONTRAK_OUT, [3.0, 10.0, 4.0], small_=True),
+      Paragraph("5.4 Menghindari cognitive overload pada manusia", h2), P("Pemilik adalah sumber daya paling langka. Desain berikut menjaga beban kognitif rendah:")]
 for a, b in K.COGNITIVE:
     s += [KeepTogether([Paragraph(a, h3), P(b)])]
-s += [Paragraph("5.5 Jadwal, approval, dan eskalasi", h2), P("Batas waktu dan tangga eskalasi (angka bertanda simulasi dipakai pada eksperimen; angka bertanda rancangan belum disimulasikan). Keputusan yang butuh persetujuan mengikuti level otonomi berikut:"),
-      table(K.JADWAL, [4.6, 4.6, 4.8, 3.0], small_=True), Spacer(1, 4), table(K.APPROVAL_LEVELS, [3.2, 8.2, 5.6], small_=True), Spacer(1, 4), table(K.AUTONOMY, [2.6, 7.4, 3.2, 3.8]),
-      P("Aturan otonomi (Bab 3): aksi otomatis hanya jika risiko < rho, confidence > tau, dan agen berwenang. Observability: jumlah pesan, id percakapan, audit log, anggaran lembur, dan batas berhenti (steps > K atau conf < tau).", small)]
-s += [Paragraph("5.6 Koordinasi, negosiasi, keamanan, dan mobile agent", h2), P("Antaragen berkomunikasi lewat pesan bertipe (CFP, tawaran, ACCEPT, REJECT, INFORM, CONFIRM) di event bus; pada WhatsApp pesan yang sama dikirim sebagai template terstruktur.")]
+s += [Paragraph("5.5 Jadwal, approval, dan eskalasi", h2), P("Batas waktu dan tangga eskalasi (status menunjukkan apakah angka dipakai pada simulasi, aturan di kode, atau aplikasi web):"),
+      table(K.JADWAL, [4.0, 5.0, 5.0, 3.0], small_=True), Spacer(1, 4), table(K.APPROVAL_LEVELS, [3.2, 8.2, 5.6], small_=True)]
+s += [Paragraph("5.6 Koordinasi, negosiasi, dan keamanan", h2), P("Antaragen berkomunikasi lewat pesan bertipe (CFP, PROPOSE, ACCEPT, REJECT, INFORM) di event bus.")]
 for a, b in K.NEGO:
     s += [KeepTogether([Paragraph(a, h3), P(b)])]
 s += [Paragraph("Uji serangan pada bus pesan", h3), table(K.ATTACKS, [6.4, 10.6]),
-      P("Quality score produsen dan trust carrier memakai pembaruan bertahap (80% nilai lama, 20% hasil terbaru); produsen atau carrier di bawah 0,60 diblokir sementara oleh gerbang kebijakan.", small),
-      Paragraph("Mobile agent (Scout)", h3),
-      P("Scout Agent berpindah ke host carrier/pelabuhan untuk membaca jadwal secara lokal lalu kembali membawa ~2 KB, alih-alih menarik dump jadwal 1,5 MB (Bab 5). Migrasi mensyaratkan trust host >= 0,80, risiko <= 0,20, dan state terverifikasi (SHA-256 + HMAC); jika tidak, sistem jatuh ke remote pull."),
-      table(K.MIGR, [5.6, 1.5, 2.2, 1.6, 1.6, 4.5]),
-      fig("fig_mobile.png", 8.5, "Gambar 6. Data yang dipindahkan per skenario: scout vs remote pull (host carrier A tidak lolos trust sehingga tetap remote pull).")]
-s += [Paragraph("5.7 Mengapa multi-agent, bukan single agent?", h2),
-      P("Kriteria pemilihan arsitektur mengikuti Bab 4 (latensi dan bandwidth, fault tolerance, optimalitas global, biaya koordinasi):"),
-      table(K.CRITERIA, [3.3, 3.2, 3.0, 2.4, 5.1], small_=True), Spacer(1, 4), table([["Alasan", "Penjelasan dan bukti"]] + [list(w) for w in K.WHY], [4.2, 12.8]), Paragraph("Catatan penting", h3), P(K.WHY_HONEST),
-      fig("fig_staleness.png", 16.8, "Gambar 7. Nilai bid live: selisih multi-agen terhadap agen tunggal (margin per order dan OTIF) menurut variasi ketersediaan kapasitas dan galat registry."),
-      table(K.staleness_table(), [3.4, 4.4, 2.6, 3.9, 2.7], small_=True), Spacer(1, 4),
-      fig("fig_robust.png", 13.0, "Gambar 8. Gangguan bidang kontrol 2-5 hari: tidak ada penurunan berarti pada kasus ini karena slack jadwal cukup."),
-      fig("fig_scale.png", 16.5, "Gambar 9. Skala: beban puncak per node, total pesan, dan OTIF ketika produsen dan order bertambah (fan-out CFP acak 25 produsen).")]
+      Paragraph("Scout agent mobile (desain dan demo)", h3),
+      P("Scout berpindah ke host forwarder atau pelabuhan untuk membaca jadwal secara lokal lalu kembali membawa ringkasan kecil. Migrasi mensyaratkan trust >= 0,80, risiko <= 0,20, dan state terverifikasi (SHA-256 + HMAC); jika tidak, sistem menarik data jarak jauh. "
+        "Status: demo aturan migrasi; tidak dipakai oleh simulator atau aplikasi web."), table(K.MIGR, [5.6, 1.5, 2.2, 1.6, 1.6, 4.5])]
+s += [Paragraph("5.7 Mengapa multi-agent, bukan single agent?", h2), P("Kriteria pemilihan arsitektur (Bab 4) dan bukti dari empat konfigurasi:"),
+      table(K.CRITERIA, [3.3, 4.6, 4.6, 4.5], small_=True), Spacer(1, 4), table([["Alasan", "Penjelasan dan bukti"]] + [list(w) for w in K.WHY], [4.2, 12.8]), Paragraph("Catatan penting", h3), P(K.WHY_HONEST)]
 
-# ================================================================= 3 data & computation
+# ================================================================= 6 data
 s += [Paragraph("6. Ilustrasi Data dan Perhitungan Komputasi", h1),
-      P("Data dibangkitkan dengan generator sintetis (seed tetap): produsen arang (kapasitas, tingkat kelolosan, keandalan, harga, waktu balas WhatsApp), order dan RFQ, kerusakan lini gudang, kongesti pelabuhan, deskripsi produk HS, dan riwayat 4.000 pengiriman carrier. "
-        "Agen tidak melihat proses pembangkit (mis. logit roll-over dan ketersediaan kapasitas tersembunyi); mereka harus mempelajarinya atau menawarnya secara lokal."),
-      Paragraph("6.1 Sumber data: situs KrakaCoal dan asumsi", h2),
-      P("Kolom sumber membedakan angka dari situs KrakaCoal (SOURCE) dan asumsi penulis (ASUMSI):", small),
-      table(K.PROFILE_TABLE, [4.4, 5.6, 7.0], small_=True), Spacer(1, 4), table(K.ASSUME, [4.0, 4.2, 8.8], small_=True), P(K.ASSUME_NOTE),
-      P("Delapan order pertama pada skenario 7 (RFQ = hari RFQ masuk; DP = order dirilis setelah verifikasi; closing = kapal yang dijanjikan sales):", small),
-      table(K.sample_orders("kraka"), [1.4, 1.3, 2.6, 2.3, 1.9, 3.0, 2.5, 2.0], small_=False),
-      Spacer(1, 4), P("Tiga carrier (fiktif, ASUMSI):", small), table(K.CARRIER_TABLE, [3.0, 3.2, 1.8, 2.6, 2.8, 3.6]),
-      Paragraph("6.2 Perhitungan manual yang dapat diperiksa", h2),
-      P("Setiap contoh dihitung oleh fungsi yang sama dengan yang dipakai simulator (keluaran kode pada outputs/worked_example.json), sehingga dapat diverifikasi dengan kalkulator.")]
+      P("Data dibangkitkan dengan generator sintetis (seed tetap) di atas harga dan pemasok nyata. Agen tidak melihat proses pembangkit; misalnya buyer_max (batas harga maksimum pembeli) dan keandalan pemasok tersembunyi dari agen."),
+      Paragraph("6.1 Sumber data: nyata dan asumsi", h2), table(K.PROFILE_TABLE, [4.0, 7.6, 5.4], small_=True), Spacer(1, 4), table(K.ASSUME, [3.6, 8.4, 5.0], small_=True), P(K.ASSUME_NOTE),
+      Paragraph("6.2 Perhitungan yang dapat diperiksa", h2), P("Setiap contoh dihitung oleh fungsi yang sama dengan yang dipakai simulator dan aplikasi (keluaran pada outputs/worked_example.json), sehingga dapat diverifikasi dengan kalkulator.")]
 for ttl, txt in K.WORKED:
     s += [KeepTogether([Paragraph(ttl, h3), P(txt)])]
-s += [Paragraph("6.3 Simulasi penuh", h2),
-      P("Simulator diskret (langkah 0,05 hari) menjalankan ketiga arsitektur pada skenario yang sama (common random numbers): kerusakan lini, HS, dokumen, gagal kirim produsen, ketersediaan kapasitas, reject QC, dan roll-over dibangkitkan dari undian yang sama, sehingga selisih murni akibat arsitektur/kebijakan. "
-        f"Hasil dibahas pada Bagian 8 ({K.R['n_scenarios']} skenario evaluasi, seed 0-299).")]
 
-# ================================================================= 7 simulasi (cuplikan)
-s += [PageBreak(), Paragraph("7. Cuplikan Simulasi", h1),
-      P("Bagian ini menunjukkan keluaran simulasi yang sebenarnya, bukan ilustrasi. Perintah python -m kraka_mas.demo menjalankan satu skenario dan mencetak tabel order, pesan antaragen, dan ringkasan; gambar di bawah adalah keluaran itu."),
-      Paragraph("7.1 Keluaran terminal satu skenario", h2),
-      fig("fig_sim_terminal.png", 16.5, "Gambar 10. Keluaran python -m kraka_mas.demo (skenario 7, multi-agen). Tiap baris order menunjukkan kapan RFQ masuk, DP terverifikasi, barang tiba, kapal berangkat, batas kirim (LSD), berapa produsen dan putaran; OTIF = yes bila berangkat sebelum LSD dan minimal 98% kg lolos uji. Bagian bawah memperlihatkan pesan antaragen yang tercatat pada audit log."),
-      Paragraph("7.2 Waktu tiap order: manual vs multi-agen", h2),
-      fig("fig_gantt.png", 16.5, "Gambar 11. Tiga order pada proses manual dan multi-agen (skenario 7). Balok terang = pemasokan dari DP sampai barang lengkap di gudang; garis hijau = dokumen siap paralel pada multi-agen."),
-      Paragraph("7.3 Siapa yang mengirim berapa dan kapan (satu order)", h2),
-      fig("fig_sourcing_detail.png", 16.0, "Gambar 12. Order #4 (27 ton): produsen yang dikontrak, waktu produksi sampai kirim, dan hasil per putaran. Merah = gagal kirim; garis hijau = barang lengkap. Manual memakai lebih banyak putaran dan produsen.")]
+# ================================================================= 7 cuplikan
+s += [PageBreak(), Paragraph("7. Cuplikan Simulasi dan Aplikasi", h1),
+      P("Bagian ini menampilkan keluaran yang sebenarnya, bukan ilustrasi."), Paragraph("7.1 Keluaran konsol satu skenario", h2),
+      fig("fig_sim_terminal.png", 16.5, "Gambar 6. Keluaran python -m kraka_mas.demo: daftar inquiry dan nasibnya pada arm MAS, perbandingan empat arm pada bulan yang sama, dan pesan antaragen yang tercatat pada bus (tanda tangan dan rantai hash diperiksa)."),
+      Paragraph("7.2 Aplikasi web", h2), P("Aplikasi Next.js yang sama dijalankan sebagai build standalone. Tangkapan layar berikut memakai data seed dari lembar harga pemilik.")]
+for f_, cp in (("01_products.png", "Gambar 7. Halaman Products: harga daftar, harga pemasok, markup per grade, dan margin per ton."),
+               ("02_rfq_price_negotiation.png", "Gambar 8. RFQ agent membaca pesan, Quote agent menghitung harga dan lantai, Negotiation agent membalas dalam batas."),
+               ("04_order_procurement.png", "Gambar 9. Procurement: usulan PO ke pemasok dan rencana cadangan; menunggu persetujuan pemilik."),
+               ("06_lead_detail.png", "Gambar 10. Lead finder: detail lead, pemeriksaan badan hukum, dan draf outreach."),
+               ("07_today.png", "Gambar 11. Halaman Today: ringkasan harian dan antrean persetujuan.")):
+    p_ = K.SCREENS / f_
+    w_, h_ = PILImage.open(p_).size
+    wc = 13.5; hc = min(wc * h_ / w_, 21.0); wc = wc * hc / (wc * h_ / w_) if wc * h_ / w_ > 21 else wc
+    s += [KeepTogether([Image(str(p_), width=wc * cm, height=hc * cm), P(cp, cap)])]
 
-# ================================================================= 7 experiments
+# ================================================================= 8 eksperimen
 s += [PageBreak(), Paragraph("8. Implementasi dan Eksperimen", h1), Paragraph("8.1 Rancangan eksperimen", h2),
-      P("Tiga sistem dijalankan pada skenario yang sama: (a) Manual: admin menghubungi produsen satu per satu via WhatsApp, pembagian rata, cadangan 5%, dokumen setelah produksi, HS manual, carrier yang dijanjikan; "
-        "(b) Agen tunggal: satu inti keputusan dengan data pendaftaran produsen (kapasitas berderau 10% x ketersediaan rata-rata), pengaturan gudang dinamis, ML-HS, dokumen paralel, dan aturan keputusan hibrida yang sama; "
-        "(c) Multi-agen KCMAS: keputusan yang sama, tetapi kuota dinegosiasikan lewat Contract Net dan produsen menawar dengan kapasitas nyata."),
-      P(f"Evaluasi: {K.R['n_scenarios']} skenario (seed 0-299) ; interval kepercayaan 95% dari bootstrap 2.000 resampel; seed kalibrasi (1000+) dan pelatihan RL (10.000+) terpisah. Kode diuji dengan unit test (pytest)."),
-      Paragraph("8.2 Hasil utama", h2), fig("fig_main_results.png", 17, "Gambar 13. Hasil utama pada 300 skenario berpasangan: OTIF, margin per order, dan biaya non-sourcing .")]
-s += [table(K.main_table("kraka"), [5.6, 3.8, 3.8, 3.8], small_=True), Spacer(1, 3), table(K.paired("kraka"), [4.0, 4.3, 4.3, 4.4], small_=True)]
-s += [Paragraph("8.3 Ablation: kontribusi tiap komponen", h2), fig("fig_ablation.png", 17, "Gambar 14. Ablation multi-agen: selisih margin per order terhadap varian lengkap (hijau = varian lebih baik dari penuh)."),
-            table(K.ablation_table("kraka"), [5.5, 1.5, 1.6, 2.4, 2.4, 2.0, 1.6], small_=True), Spacer(1, 3), Paragraph("Interpretasi.", h3)] + [P(t) for t in K.INTERPRET]
-s += [Paragraph("8.4 Buffer over-allocation", h2), fig("fig_buffer.png", 14.5, "Gambar 15. Buffer pada putaran pertama: margin per order dan OTIF (dipilih 15% pada seed kalibrasi)."), table(K.buffer_table(), [3.0, 4.0, 3.0, 4.0], small_=True)]
-s += [Paragraph("8.5 Ketahanan dan skala", h2), P("Gangguan bidang kontrol: koordinator pusat mati 2-5 hari (agen tunggal) vs satu agen lini mati pada durasi sama (multi-agen); sel: OTIF."),
-      table(K.ROBUST, [5.0, 3.6, 3.6, 3.6], small_=True), Spacer(1, 4), P("Skala: order dan produsen bertambah proporsional; lini gudang bertambah; CFP multi-agen dibatasi acak 25 produsen."), table(K.SCALE, [2.6, 3.6, 3.0, 4.2, 3.6], small_=True),
-      P("Catatan: pada skala kecil agen tersibuk multi-agen (Order Agent yang menyiarkan CFP) bisa lebih sibuk daripada koordinator; keunggulan node puncak baru terlihat saat pool tumbuh karena fan-out dibatasi. Multi-agen juga lebih banyak pesan pada pemasokan.", small)]
-s += [Paragraph("8.6 Model ML, RL, Sales, dan Marketing", h2), table(K.ML_STATS, [5.2, 6.8, 5.0], small_=True), fig("fig_hs.png", 16.5, "Gambar 16. Klasifikasi HS: kurva cakupan-akurasi (selective classification) dan confusion matrix."),
-      fig("fig_risk.png", 7.5, "Gambar 17. Kalibrasi model risiko roll-over (uji 25%)."),
-      fig("fig_rl.png", 17, "Gambar 18. Q-learning: kurva belajar di MDP abstrak, perbandingan policy di MDP, dan perbandingan policy yang sama di simulator penuh.")]
-s += [Paragraph("Marketing & Ads Agent (eksploratif)", h3), P("Pertanyaan: bila anggaran iklan mingguan kecil (USD 500) dapat dibagi ke lima kanal dan kanal terbaik tidak diketahui, apakah pembagian adaptif menghasilkan lebih banyak RFQ berkualitas daripada pembagian rata? Angka tingkat RFQ per dolar tiap kanal adalah ASUMSI, bukan data KrakaCoal; hasil ini hanya menilai metodenya."),
+      P("Empat konfigurasi dijalankan pada skenario yang sama (common random numbers): (a) Manual: pemilik atau admin mengerjakan semuanya; (b) Agen tunggal: satu agen otonom dengan satu konteks, registry pemasok yang diperbarui berkala, tanpa gerbang manusia; "
+        "(c) B2: arsitektur multi-agen penuh dengan gerbang persetujuan manusia dimatikan; (d) MAS: arsitektur penuh dengan persetujuan manusia (yang diimplementasikan aplikasi web). Perbandingan MAS dengan B2 mengisolasi nilai pengawasan manusia."),
+      P(f"Evaluasi: {K.NS} skenario (seed 0-299), tiap skenario satu bulan inquiry; selang kepercayaan 95% dari bootstrap 2.000 resampel; model ML dilatih pada data terpisah. Kode diuji dengan 28 tes Python dan 16 tes aplikasi."),
+      Paragraph("8.2 Hasil utama", h2), fig("fig_main_results.png", 17, "Gambar 12. Hasil utama pada 300 skenario berpasangan, dengan selang kepercayaan 95%."),
+      table(K.main_table(), [4.8, 3.05, 3.05, 3.05, 3.05], small_=True), Spacer(1, 3), table(K.paired(), [4.6, 4.2, 4.2, 4.0], small_=True),
+      Paragraph("Ringkasan hasil", h3), P(f"Terhadap manual, MAS menambah margin bersih {K.ci(K.PD['mas_vs_manual_margin'], lambda x: K.n(x,0,'+',True))} USD per bulan dan ketepatan waktu {K.ci(K.PD['mas_vs_manual_otif'], lambda x: K.n(100*x,1,'+'))} poin. "
+        f"Terhadap agen tunggal, ketepatan waktu tidak berbeda nyata ({K.ci(K.PD['mas_vs_single_otif'], lambda x: K.n(100*x,1,'+'))} poin); selisih margin ({K.ci(K.PD['mas_vs_single_margin'], lambda x: K.n(x,0,'+',True))} USD) berasal dari win rate, pengecualian pemilik, dan dana yang tidak bocor.")]
+s += [Paragraph("8.3 Ablation: kontribusi tiap komponen", h2), fig("fig_ablation.png", 17, "Gambar 13. Selisih margin bersih bulanan bila satu komponen MAS dihapus; kiri kondisi dasar, kanan kondisi tertekan."),
+      table(K.ablation_table(), [4.6, 2.1, 2.0, 1.9, 2.1, 2.2, 2.1], small_=True), Spacer(1, 3), Paragraph("Interpretasi", h3)] + [P(t) for t in K.INTERPRET]
+s += [Paragraph("8.4 Stres 1: pemasok gagal dan over-kapasitas", h2), fig("fig_stress.png", 17, "Gambar 14. Kiri dan tengah: ketepatan waktu dan margin menurut pengali peluang gagal pemasok. Kanan: dana dialihkan menurut persentase inquiry dengan injeksi."),
+      table(K.failure_table(), [3.4, 3.4, 3.4, 3.4, 3.4], small_=True), P("Ketepatan waktu turun pada semua konfigurasi saat pemasok semakin sering gagal; ketiga konfigurasi agen tetap berada di atas manual dan berdekatan satu sama lain.", small)]
+s += [Paragraph("8.5 Stres 2: injeksi instruksi lewat RFQ", h2), table(K.injection_table(), [3.4, 3.4, 3.4, 3.4, 3.4], small_=True),
+      P("Laju serangan berhasil untuk tiap konfigurasi adalah asumsi (Bagian 6.1). Karena asumsi itu menentukan hasil, tabel berikut menyapu peluang keberhasilan serangan pada agen tunggal (10% inquiry dengan injeksi):"), table(K.single_inj_table(), [6.0, 5.5, 5.5], small_=True),
+      P("Pada peluang keberhasilan serendah 5%, kerugian agen tunggal kecil; pada 30% (asumsi dasar) dan 60%, kerugian besar. Pembuktian yang tidak bergantung asumsi ada pada kode: tes aplikasi memastikan lantai dan negosiasi tidak dapat diturunkan oleh teks RFQ. Yang tidak terukur di sini adalah perilaku LLM sungguhan.", small)]
+s += [Paragraph("8.6 Sensitivitas dan skala", h2), fig("fig_sensitivity.png", 17, "Gambar 15. Batas diskon (kiri dan tengah) dan volume inquiry terhadap kapasitas pemasok tetap (kanan)."),
+      table(K.sens_table(), [4.0, 4.3, 4.3, 4.4], small_=True), Spacer(1, 3), table(K.cost_table(), [3.2, 3.45, 3.45, 3.45, 3.45], small_=True), Spacer(1, 3), table(K.scale_table(), [3.0, 4.6, 4.6, 4.8], small_=True),
+      P("Semakin longgar batas diskon, semakin tinggi win rate dan margin bersih total (lebih banyak order) pada semua konfigurasi; MAS tetap unggul. Pada volume tinggi, ketepatan waktu manual turun paling tajam.", small)]
+s += [Paragraph("8.7 Model ML dan Marketing", h2), table(K.ML_STATS, [5.2, 6.8, 5.0], small_=True), fig("fig_ml.png", 17, "Gambar 16. Klasifikasi HS (kurva selektif dan confusion matrix) dan kalibrasi model roll-over."),
+      Paragraph("Marketing & Ads Agent (eksploratif)", h3), P("Pertanyaan: bila anggaran iklan mingguan kecil (USD 500) dapat dibagi ke lima kanal dan kanal terbaik tidak diketahui, apakah pembagian adaptif menghasilkan lebih banyak RFQ berkualitas daripada pembagian rata? Laju RFQ per dolar adalah ASUMSI; hasil ini hanya menilai metodenya."),
       table(K.MARKETING_TABLE, [6.0, 3.8, 3.4, 3.8], small_=True), Spacer(1, 3), table(K.MARKETING_SHARE, [6.0, 5.5, 5.5], small_=True),
-      fig("fig_marketing.png", 15.5, "Gambar 19. Marketing Agent: RFQ berkualitas selama 12 minggu dan pembagian anggaran per kanal (rata-rata 400 pengulangan simulasi).")]
-s += [Paragraph("8.7 Implikasi bisnis bagi KrakaCoal", h2), table(K.BIZ, [9.0, 8.0], small_=True)]
-s += [Paragraph("8.8 Ancaman validitas dan keterbatasan", h2)] + [Paragraph("- " + esc(t), bul) for t in K.LIMITS]
+      fig("fig_marketing.png", 15.5, "Gambar 17. Marketing Agent: RFQ berkualitas selama 12 minggu dan pembagian anggaran per kanal (400 pengulangan).")]
+s += [Paragraph("8.8 Implikasi bisnis bagi KrakaCoal", h2), table(K.BIZ, [9.0, 8.0], small_=True)]
 
-# ================================================================= 8 conclusion
-s += [Paragraph("9. Kesimpulan dan Rencana Berikutnya", h1),
-      P("KCMAS menunjukkan bahwa alur ekspor arang dari puluhan produsen (pemasaran, RFQ, kuota produsen, uji mutu, dokumen, carrier) dapat dimodelkan sebagai sistem agen cerdas yang hibrida, aman, dan dapat diaudit. "
-        f"Pada simulasi sintetis, OTIF naik dari {K.pc(K.h['kraka']['otif_s'])} ke {K.pc(K.h['kraka']['otif_m'])}. "
-        "Keunggulan multi-agen atas agen tunggal nyata tetapi kecil dan bergantung pada seberapa usang data pusat; rekomendasi akhir adalah arsitektur hibrida dan transisi bertahap dari agen tunggal ke multi-agen saat pool produsen tumbuh."),
-      Paragraph("Rencana:", h3)] + [Paragraph("- " + esc(t), bul) for t in K.NEXT]
-s += [Paragraph("Peta materi kuliah ke implementasi", h2), table(K.LECTURE_MAP, [6.2, 6.6, 4.2], small_=True)]
+# ================================================================= 9 status
+s += [Paragraph("9. Status Komponen", h1), P("Status dibedakan agar jelas apa yang sudah berjalan: Selesai = berfungsi dan diuji; Sebagian = ada tetapi terbatas (lihat catatan); Ditunda = belum dikerjakan; Dihapus = dibuang dari versi sebelumnya."),
+      table(K.STATUS, [4.6, 3.8, 2.4, 6.2], small_=True)]
+# ================================================================= 10 keterbatasan
+s += [Paragraph("10. Keterbatasan dan Ancaman Validitas", h1)] + B(K.LIMITS)
+# ================================================================= 11 kesimpulan
+s += [Paragraph("11. Kesimpulan dan Rencana Berikutnya", h1),
+      P("KCMAS menunjukkan bahwa pekerjaan harian seorang trader arang dapat dibagi menjadi agen perangkat lunak dengan pemisahan wewenang, lantai harga di kode, dan persetujuan pemilik. "
+        f"Pada simulasi, waktu respons turun dari {K.n(K.mv('manual','ttq_h'),0)} jam ke {K.n(K.mv('mas','ttq_h'),1)} jam, margin bersih naik {K.usd(K.mv('mas','margin')-K.mv('manual','margin'))} per bulan, dan ketepatan waktu naik {K.n(100*(K.mv('mas','otif')-K.mv('manual','otif')),0)} poin. "
+        "Keunggulan MAS atas agen tunggal terutama pada keamanan dan fleksibilitas pemilik, bukan ketepatan waktu. Semua hasil adalah simulasi atas data operasional sintetis; validasi lapangan adalah langkah berikutnya."),
+      Paragraph("Rencana:", h3)] + B(K.NEXT) + [Paragraph("Peta materi kuliah ke implementasi", h2), table(K.LECTURE_MAP, [6.2, 6.6, 4.2], small_=True)]
+# ================================================================= 12 artefak
+s += [Paragraph("12. Tabel Artefak", h1), P("Semua deliverable Tugas 1 dan lokasinya:"), table(K.ARTEFAK, [4.0, 7.0, 6.0], small_=True),
+      Spacer(1, 4), P("Menjalankan: pip install -r requirements.txt; PYTHONPATH=src python -m kraka_mas.experiments; python -m kraka_mas.worked_example; python -m kraka_mas.figures; python -m kraka_mas.demo; python docs/build_pdf.py; python docs/build_pptx.py; pytest tests. "
+        "Aplikasi web: cd webapp; npm install; npm run build; APP_PASSWORD=... npm start.", small)]
+# ================================================================= lampiran
+s += [PageBreak(), Paragraph("Lampiran A. Prompt dan Spesifikasi untuk Menghasilkan Kode", h1),
+      P("Setiap blok berisi instruksi yang cukup untuk menulis ulang komponen dari awal dan uji penerimaan dengan angka dari laporan, sehingga hasilnya dapat diperiksa.")]
+for ttl, spec, test in K.APPENDIX:
+    s += [KeepTogether([Paragraph(ttl, h3), P("Prompt: " + spec, small), P("Uji penerimaan: " + test.replace("Uji penerimaan: ", ""), small), Spacer(1, 4)])]
 s += [Paragraph("Referensi", h1)]
 for r_ in sorted(K.SOTA_ROWS, key=lambda r: r[2]):
     s += [P("- " + r_[2] + " https://doi.org/" + r_[5], small)]
 s += [P("- Prof. Dr. Azhari MT. Materi kuliah AI Agentic Technology Systems for Digital Enterprise Ecosystem, Bab 1-5, Universitas Gadjah Mada.", small),
-      P("- PT. Kraka Coal Indonesia. krakacoal.com: FAQ, halaman Products, dan knowledge base (MOQ, lead time, dokumen). Dibaca dari repositori sumber situs milik penulis karena situs diblokir dari lingkungan kerja.", small)]
-s += [Paragraph("Repositori dan cara menjalankan", h1), P(f"GitHub: {K.REPO} (branch claude/compassionate-noether-fhv9vc)."),
-      P("pip install -r requirements.txt  |  cd src && python -m kraka_mas.experiments  |  python -m kraka_mas.worked_example  |  python -m kraka_mas.figures  |  python -m kraka_mas.demo  |  cd .. && python docs/build_pdf.py && python docs/build_pptx.py  |  pytest tests", small)]
+      P("- PT. Kraka Coal Indonesia. krakacoal.com: halaman Products dan FAQ (MOQ, lead time, dokumen). Harga daftar dan harga pemasok dari lembar harga pemilik.", small)]
 
 out = D / "Laporan_Tugas1.pdf"
 Doc(str(out)).multiBuild(s)

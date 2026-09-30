@@ -395,6 +395,12 @@ class Trader:
 Trader.fail_mult = 1.0
 
 
+def rows_for(sc: Scenario, arm_key: str, models: dict, knobs: dict | None = None):
+    """Per-inquiry records (used by the demo and the worked example)."""
+    tr = Trader(sc, ARMS[arm_key], models, knobs); tr.fail_mult = (knobs or {}).get("fail_mult", 1.0)
+    return tr.run()
+
+
 def simulate(sc: Scenario, arm_key: str, models: dict, knobs: dict | None = None, arm: Arm | None = None):
     arm = arm or ARMS[arm_key]
     t = Trader(sc, arm, models, knobs)

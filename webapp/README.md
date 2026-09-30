@@ -37,7 +37,7 @@ Data lives in `data/store.json` (created from demo seed data on first run). Edit
 ## Environment variables (`.env.example`)
 * `APP_PASSWORD`: HTTP Basic auth for the whole app (user `admin`). Set it on any public deployment.
 * `BRAVE_SEARCH_API_KEY`: turns on web discovery in the Lead finder (public search results only; LinkedIn pages are never scraped).
-* `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`): lets a language model polish replies and content. The model only rewrites text; numbers and claims come from the agents and the claims guardrail.
+* `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (both required; the model name is yours to choose): lets a language model polish replies and content. The model only rewrites text; numbers and claims come from the agents and the claims guardrail.
 * `DATA_FILE`: path of the JSON data file.
 
 ## Honest limits
