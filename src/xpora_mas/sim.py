@@ -15,6 +15,7 @@ from .data import Scenario, next_closing, roll_prob, features_for
 from .messaging import Message, MessageBus, SecurityError
 from .negotiation import trust_update
 from . import mobile
+from .consortium import Sourcing
 
 CTRL = "COORDINATOR"
 STATUS_PERIOD = 0.25            # central: machines report status every 6 h
@@ -47,6 +48,12 @@ class OrderRT:
     human_cost: float = 0.0
     hs_ok: bool = True
     missed_commit: bool = False
+    arrival: float = 0.0             # when the goods are complete at the consolidation warehouse
+    dp: float = 0.0                  # order released (DP verified)
+    src: dict = field(default_factory=dict)
+    revenue: float = 0.0
+    shelf_disc: float = 0.0
+    src_cost: float = 0.0
     hist: list = field(default_factory=list)      # [stage, machine id, start, end] for Gantt charts
     traj: list = field(default_factory=list)      # [(state idx, executed action, cost)] for online RL
     _t0: float = 0.0
@@ -106,6 +113,7 @@ class Sim:
             self.machines[i].extra_fails.append((a, b - a, False))
         self.wc_idx = {wc: [i for i, m in enumerate(self.machines) if m.m.wc == wc] for wc in range(3)}
         self.bus = MessageBus(secure=self.opts["secure"]) if mode != "static" else None
+        self.pf = sc.profile
         self._register_agents()
         self.trust = {j: 0.8 for j in range(3)}
         self.pending_trust = []
@@ -122,6 +130,16 @@ class Sim:
         self.n_air = 0
         self.airlog = []
         self.util = None
+        self.sourcing = Sourcing(self)
+        res = self.sourcing.run()
+        for r in self.orders:
+            rr = res[r.o.oid]
+            r.src, r.arrival = rr, rr["arrival"]
+            r.dp = r.o.dp_human if mode == "static" else r.o.dp_agent
+            r.src_cost = rr["cost"] + rr["waste"]
+            r.human_touches += rr["touches"] + 1                    # +1 = admin verifies the down payment by hand (all modes)
+            if mode != "static":
+                self.levels[2] += 1                                 # DP verification = level 2 (human-in-the-loop, by Xpora design)
 
     # ---------------------------------------------------------------- setup
     def _register_agents(self):
@@ -133,15 +151,18 @@ class Sim:
             b.register(f"order{r.o.oid}", {"CFP", "ACCEPT", "REJECT", "REQUEST", "CONFIRM"})
         for m in self.machines:
             b.register(m.m.mid, {"PROPOSE", "REFUSE", "INFORM", "AGREE"})
+        for j in range(len(self.sc.producers)):
+            b.register(f"prod{j}", {"PROPOSE", "REFUSE", "INFORM", "AGREE"})
         for j, c in enumerate(C.CARRIERS):
             b.register(f"carrier{j}", {"PROPOSE", "REFUSE", "INFORM", "AGREE"})
         for n in ("compliance", "risk", "governance", "scout"):
             b.register(n, {"INFORM", "REQUEST", "CONFIRM", "AGREE", "REFUSE", "PROPOSE"})
 
-    def msg(self, s, r, p, content, conv, deliver=None):
+    def msg(self, s, r, p, content, conv, deliver=None, t=None):
         if not self.bus:
             return
-        self.bus.send(Message(s, r, p, content, conv, self.t), self.t, deliver)
+        t = self.t if t is None else t
+        self.bus.send(Message(s, r, p, content, conv, t), t, deliver)
 
     # ---------------------------------------------------------------- helpers
     def coord_up(self, t):
@@ -363,7 +384,7 @@ class Sim:
         for j, car in enumerate(C.CARRIERS):
             closing = next_closing(t_port, car.offset)
             buf = closing - t_port
-            out.append(dict(j=j, closing=closing, buf=buf, cost=car.rate * r.o.containers, dep0=closing + 3.0))
+            out.append(dict(j=j, closing=closing, buf=buf, cost=car.rate * r.o.containers * (self.pf.rate_factor if not r.o.perishable else 1.0), dep0=closing + 3.0))
         return out
 
     def phat(self, j, r, t_port, buf):
@@ -380,12 +401,12 @@ class Sim:
         t_port = t_ready + C.TRUCK_TO_PORT_DAYS
         opts = self.options(r, t_port)
         sea_cheapest = min(x["cost"] for x in opts)
-        air_cost = C.AIR_MULT * C.CARRIERS[1].rate * o.containers
+        air_cost = 1e9                                     # 15-27 t cannot go by air: option disabled
         air_dep = t_port + 1.0
         conv = f"CNP-FRT-{o.oid}"
         # --- scout: check the vessel schedule at the carrier hosts (mobile) or pull the raw dump (static)
         if self.mode != "static":
-            hosts = ["carrier_EcoLine_edge", "carrier_MidSea_edge", "carrier_Prime_edge"]
+            hosts = ["carrier_ColdLineA_edge", "carrier_ColdLineB_edge", "carrier_ColdLinePrime_edge"]
             for j, h in enumerate(hosts):
                 if self.opts["mobile_scout"]:
                     _, nb, sec, mig = mobile.query_carrier(h, o.oid, t_port, C.CARRIERS[j].offset)
@@ -441,7 +462,7 @@ class Sim:
                 self.msg(CTRL, f"carrier{chosen}", "ACCEPT", dict(oid=o.oid), f"FRTB-{o.oid}")
         # --- governance: autonomy level of this decision (lecture Ch.2 sec.2.6 / Ch.3 autonomy = 1[risk<rho and conf>tau and authority])
         if self.opts["governance"] and self.mode != "static":
-            need_human = use_air or o.value >= C.APPROVAL_VALUE_USD
+            need_human = use_air or o.value >= self.pf.approval_usd
             if need_human:
                 self.levels[2] += 1
                 r.human_touches += 1
@@ -467,7 +488,13 @@ class Sim:
         r.late_days = max(0.0, r.dep - o.lsd)
         r.missed_commit = r.dep > o.commit_dep + 1e-9
         r.penalty = C.late_penalty(o.value, r.late_days)
-        r.hold_cost = C.HOLD_COST_PER_DAY * max(0.0, r.dep - 3.0 - t_ready)
+        r.hold_cost = self.pf.hold_cost_day * max(0.0, r.dep - 3.0 - t_ready)
+        # revenue: contract value x fill rate, minus a discount if the perishable cargo arrives with too little shelf life
+        if o.perishable and not use_air:
+            age = (r.dep - r.prod_done) + C.CARRIERS[chosen].transit
+            remain = C.SHELF_DAYS - age
+            r.shelf_disc = 0.0 if remain >= C.SHELF_MIN_REMAIN else (C.SHELF_DISCOUNT if remain >= 0 else 0.5)
+        r.revenue = o.value * r.src["fill"] * (1 - r.shelf_disc)
         r.status = "shipped"
 
     def apply_trust(self, t):
@@ -493,10 +520,10 @@ class Sim:
                     self.msg(m.m.mid, CTRL, "INFORM", dict(status="ok"), f"HB-{m.m.mid}-{int(t*100)}")
                 next_status += STATUS_PERIOD
             for r in self.orders:
-                if r.status == "pending" and r.stage == 0 and t >= r.o.release and r.machine == -1:
+                if self.opts["parallel_docs"] and not r.docs_started and t >= r.dp:
+                    self.start_docs(r, r.dp)                # documents start when the order is released, in parallel with sourcing
+                if r.status == "pending" and r.stage == 0 and t >= r.arrival and r.machine == -1:
                     r.machine = -2
-                    if self.opts["parallel_docs"]:
-                        self.start_docs(r, t)
                     self.dispatch(r, t, released=True)
                 elif r.wait_dispatch and self.coord_up(t):
                     self.dispatch(r, t)
@@ -519,7 +546,7 @@ class Sim:
                 r.late_days, r.penalty = 30.0, C.late_penalty(r.o.value, 30.0); r.dep = float("nan")
             touches = r.human_touches
             if self.mode == "static":
-                touches += 3                                # planner dispatches 3 stages by hand
+                touches += 4                                # planner dispatches 3 stages + grades the goods by hand
             r.human_cost = C.HUMAN_TOUCH_COST * touches
             r.human_touches = touches
             res.append(r)
@@ -539,8 +566,21 @@ class Sim:
             jain=jain(util) if sum(speed) > 0 else 1.0, makespan=max((r.prod_done for r in res if r.prod_done == r.prod_done), default=0.0),
             q_denied=self.q_denied, levels=dict(self.levels),
         )
-        out["total_cost"] = out["freight"] + out["penalty"] + out["overtime"] + out["hold"] + out["human"]
-        out["extra_cost"] = out["total_cost"] - 0.0
+        out["sourcing"] = total(lambda r: r.src_cost)
+        out["revenue"] = total(lambda r: r.revenue)
+        out["total_cost"] = out["sourcing"] + out["freight"] + out["penalty"] + out["overtime"] + out["hold"] + out["human"]
+        out["margin"] = out["revenue"] - out["total_cost"]
+        out["margin_pct"] = out["margin"] / max(out["revenue"], 1.0)
+        out["fill"] = total(lambda r: r.src["fill"]) / n
+        out["otif"] = sum(1 for r in res if r.late_days <= 0 and r.src["fill"] >= 0.98) / n
+        out["shelf_disc"] = total(lambda r: r.shelf_disc) / n
+        out["rej_share"] = total(lambda r: r.src["rej"]) / max(total(lambda r: r.o.qty), 1.0)
+        out["rounds"] = total(lambda r: r.src["rounds"]) / n
+        out["producers_used"] = total(lambda r: r.src["producers"]) / n
+        out["defaults"] = total(lambda r: r.src["defaults"]) / n
+        out["arrival_lag"] = total(lambda r: r.arrival - r.dp) / n
+        out["jain_producers"] = self.sourcing.jain()
+        out["surplus_waste"] = total(lambda r: r.src["waste"])
         if self.bus:
             n_nodes = len(self.bus.per_node)
             out.update(msgs=self.bus.n_msgs, bytes=self.bus.bytes, comm_s=self.bus.comm_seconds,
