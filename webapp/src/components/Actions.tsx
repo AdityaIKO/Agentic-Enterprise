@@ -82,8 +82,8 @@ export function ProductEditor({ p }: { p: { id: string; listPriceUsdT: number; l
   return (
     <>
       <td><input className="n" type="number" value={v.supplierPriceUsdT} onChange={(e) => set("supplierPriceUsdT", +e.target.value)} /></td>
-      <td><input className="n" type="number" value={v.listPriceUsdT} onChange={(e) => set("listPriceUsdT", +e.target.value)} /></td>
       <td>{v.supplierPriceAltUsdT !== undefined ? <input className="n" type="number" value={v.supplierPriceAltUsdT} onChange={(e) => set("supplierPriceAltUsdT", +e.target.value)} /> : <span className="mute">-</span>}</td>
+      <td><input className="n" type="number" value={v.listPriceUsdT} onChange={(e) => set("listPriceUsdT", +e.target.value)} /></td>
       <td>{v.listPriceAltUsdT !== undefined ? <input className="n" type="number" value={v.listPriceAltUsdT} onChange={(e) => set("listPriceAltUsdT", +e.target.value)} /> : <span className="mute">-</span>}</td>
       <td><button className="btn alt" onClick={async () => { await fetch(`/api/products/${p.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(v) }); setSaved(true); r.refresh(); }}>{saved ? "Saved" : "Save"}</button></td>
     </>
