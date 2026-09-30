@@ -3,10 +3,10 @@ import { scoreLead } from "./agents/leads";
 
 export const STORE_VERSION = 3;
 
-// Buyer prices below are YOUR price sheet (FOB Central Java, September 2026), entered from your slides.
-// SUPPLIER PRICES ARE DEMO VALUES: back-calculated from your list price and the typical markup (coconut 10%, sawdust ~8.5%, hardwood ~32%).
-// Replace them with the real supplier prices in the Products page.
-const back = (list: number, markupPct: number) => Math.round(list / (1 + markupPct / 100));
+// LIST prices = your buyer offers (USD/MT, FOB Central Java, September 2026, freight excluded), from your price sheet.
+// SUPPLIER prices = what you pay, from your supplier sheets (coconut and sawdust quoted in USD, hardwood quoted in IDR at 17,500 IDR/USD).
+// The unit is assumed to be USD per MT. Markups are whatever the two prices imply: they differ per grade.
+const IDR = 17500;
 
 export function seedStore(): Store {
   const today = new Date().toISOString().slice(0, 10);
@@ -19,15 +19,15 @@ export function seedStore(): Store {
     { id: "S-HARD2", name: "Hardwood supplier (backup)", region: "Kalimantan", categories: ["hardwood"], role: "backup", capacityTPerMonth: 100, leadDays20ft: 14, leadDays40ft: 18, packingDays: 4, reliability: 0.8, paymentTerms: "not entered", active: true },
   ];
   const products: Product[] = [
-    { id: "coco-platinum", category: "coconut", name: "Coconut shisha: Platinum", spec: "Ash 1.8-2%, burn 3 h", packing: "10 kg full-colour master box (+1 kg inner box option)", listPriceUsdT: 1600, listPriceAltUsdT: 1750, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: back(1600, 10) },
-    { id: "coco-premium", category: "coconut", name: "Coconut shisha: Premium", spec: "Ash 2.1-2.4%, burn 2.5 h (most-ordered grade)", packing: "10 kg master box (+1 kg inner box option)", listPriceUsdT: 1450, listPriceAltUsdT: 1600, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: back(1450, 10) },
-    { id: "coco-medium", category: "coconut", name: "Coconut shisha: Medium", spec: "Ash 2.5-3%, burn 2 h (economy)", packing: "10 kg master box (+1 kg inner box option)", listPriceUsdT: 1300, listPriceAltUsdT: 1450, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: back(1300, 10) },
-    { id: "saw-ab", category: "sawdust", name: "Sawdust charcoal: Grade AB", spec: "Up to 30 cm, A+B mix, longest burn", packing: "10-30 kg master box", listPriceUsdT: 850, supplierId: "S-SAW", supplierPriceUsdT: back(850, 8.5) },
-    { id: "saw-bc", category: "sawdust", name: "Sawdust charcoal: Grade BC", spec: "Up to 20 cm, B+C mix, shorter burn", packing: "10-30 kg master box", listPriceUsdT: 790, supplierId: "S-SAW", supplierPriceUsdT: back(790, 8.5) },
-    { id: "saw-cd", category: "sawdust", name: "Sawdust charcoal: Grade CD", spec: "Up to 10 cm, C+D mix, shortest burn", packing: "10-30 kg master box", listPriceUsdT: 750, supplierId: "S-SAW", supplierPriceUsdT: back(750, 8.5) },
-    { id: "hard-halaban", category: "hardwood", name: "Hardwood: Halaban", spec: "6,800-7,700 kcal/kg, 5-8 h burn", packing: "10-20 kg bag", listPriceUsdT: 410, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: back(410, 32.5) },
-    { id: "hard-tamarind", category: "hardwood", name: "Hardwood: Tamarind", spec: "6,500-7,500 kcal/kg, 5-7 h burn", packing: "10-20 kg bag", listPriceUsdT: 350, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: back(350, 32.5) },
-    { id: "hard-mixed", category: "hardwood", name: "Hardwood: Std. Mixed", spec: "5,000-6,500 kcal/kg, 3-6 h burn", packing: "10-20 kg bag", listPriceUsdT: 300, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: back(300, 32.5) },
+    { id: "coco-platinum", category: "coconut", name: "Coconut shisha: Platinum", spec: "Ash 1.8-2%, burn 3 h", packing: "10 kg full-colour master box (+1 kg inner box option)", listPriceUsdT: 1600, listPriceAltUsdT: 1750, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: 1500, supplierPriceAltUsdT: 1650 },
+    { id: "coco-premium", category: "coconut", name: "Coconut shisha: Premium", spec: "Ash 2.1-2.4%, burn 2.5 h (most-ordered grade)", packing: "10 kg master box (+1 kg inner box option)", listPriceUsdT: 1450, listPriceAltUsdT: 1600, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: 1350, supplierPriceAltUsdT: 1500 },
+    { id: "coco-medium", category: "coconut", name: "Coconut shisha: Medium", spec: "Ash 2.5-3%, burn 2 h (economy)", packing: "10 kg master box (+1 kg inner box option)", listPriceUsdT: 1300, listPriceAltUsdT: 1450, altLabel: "with 1 kg inner boxes", supplierId: "S-COCO", backupSupplierId: "S-COCO2", supplierPriceUsdT: 1200, supplierPriceAltUsdT: 1350 },
+    { id: "saw-ab", category: "sawdust", name: "Sawdust charcoal: Grade AB", spec: "Up to 30 cm, A+B mix, longest burn", packing: "10-30 kg master box", listPriceUsdT: 850, supplierId: "S-SAW", supplierPriceUsdT: 780 },
+    { id: "saw-bc", category: "sawdust", name: "Sawdust charcoal: Grade BC", spec: "Up to 20 cm, B+C mix, shorter burn", packing: "10-30 kg master box", listPriceUsdT: 790, supplierId: "S-SAW", supplierPriceUsdT: 720 },
+    { id: "saw-cd", category: "sawdust", name: "Sawdust charcoal: Grade CD", spec: "Up to 10 cm, C+D mix, shortest burn", packing: "10-30 kg master box", listPriceUsdT: 750, supplierId: "S-SAW", supplierPriceUsdT: 680 },
+    { id: "hard-halaban", category: "hardwood", name: "Hardwood: Halaban", spec: "5-10 cm pieces, 6,800-7,700 kcal/kg, 5-8 h burn", packing: "10-20 kg bag", listPriceUsdT: 410, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: +(5600000 / IDR).toFixed(1), supplierNote: "supplier quote IDR 5,600,000" },
+    { id: "hard-tamarind", category: "hardwood", name: "Hardwood: Tamarind", spec: "5-10 cm pieces, 6,500-7,500 kcal/kg, 5-7 h burn", packing: "10-20 kg bag", listPriceUsdT: 350, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: +(4000000 / IDR).toFixed(1), supplierNote: "supplier quote IDR 4,000,000" },
+    { id: "hard-mixed", category: "hardwood", name: "Hardwood: Std. Mixed", spec: "5 cm pieces, 5,000-6,500 kcal/kg, 3-6 h burn", packing: "10-20 kg bag", listPriceUsdT: 300, supplierId: "S-HARD", backupSupplierId: "S-HARD2", supplierPriceUsdT: +(3200000 / IDR).toFixed(1), supplierNote: "supplier quote IDR 3,200,000" },
   ];
   const st: Store = {
     version: STORE_VERSION,
@@ -58,18 +58,12 @@ export function seedStore(): Store {
       { id: "ch5", name: "SEO content", spendUsd: 200, qualifiedRfqs: 1 },
     ],
     settings: {
-      markup: { coconut: { targetPct: 10, minPct: 9, maxPct: 12 }, sawdust: { targetPct: 8.5, minPct: 7, maxPct: 10 }, hardwood: { targetPct: 32.5, minPct: 25, maxPct: 40 } },
-      maxDiscountPct: 1.5,
+      maxDiscountPct: 1.5,        // ASSUMPTION: you said negotiation is capped very little; change to your real limit
+      minMarkupPct: 5,            // ASSUMPTION: protective minimum over the supplier price
       bagKg: 10,
-      packingUsdPerT: 0,
-      labUsdPerBatch: 90,
-      inlandUsdPerContainer: 260,
-      portThcUsdPerContainer: 180,
-      docsUsdPerShipment: 120,
-      marginTargetPct: 10,
       approvalValueUsd: 30000,
+      idrPerUsd: IDR,
       priorityMarkets: ["Saudi Arabia", "United Arab Emirates", "Turkey", "Germany", "Netherlands", "South Korea", "Japan"],
-      freightUsdPerContainer: { "Saudi Arabia": 2100, Germany: 2900, "South Korea": 1500, Turkey: 2600, Japan: 1600, "United Arab Emirates": 1400 },
       verifiedClaims: [
         "coconut shisha charcoal in Platinum, Premium and Medium grades",
         "sawdust charcoal in grades AB, BC and CD",

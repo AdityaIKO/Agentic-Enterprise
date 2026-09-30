@@ -24,13 +24,11 @@ export default async function Inquiry({ params }: { params: Promise<{ id: string
 
   let reply = "";
   if (ready && q && prod) {
-    const inc = p.incoterm ?? "FOB";
-    const freightPerT = q.freightPerT;
-    const price = q.verdict === "accept" ? p.targetPriceUsdT! : q.verdict === "counter" && q.counterUsdT ? Math.round(q.counterUsdT + freightPerT) : q.offerUsdT;
+    const price = q.verdict === "accept" ? p.targetPriceUsdT! : q.verdict === "counter" && q.counterUsdT ? q.counterUsdT : q.listFobUsdT;
     reply = [
       `Dear ${p.buyerName ?? "Sir/Madam"},`, "",
-      `Thank you for your inquiry. We can supply ${prod.name}, ${p.qtyT} MT (${p.container} container), ${inc} ${inc === "FOB" ? "Central Java" : p.destination ?? p.country}.`,
-      `Price: USD ${price} per MT ${inc}. Packing: ${prod.packing}. Spec: ${prod.spec}.`,
+      `Thank you for your inquiry. We can supply ${prod.name}, ${p.qtyT} MT (${p.container} container), FOB Central Java.`,
+      `Price: USD ${price} per MT FOB Central Java (freight to ${p.destination ?? p.country} not included). Packing: ${prod.packing}. Spec: ${prod.spec}.`,
       "Production takes about 10 days for a 20ft and 14 days for a 40ft container, plus 3-6 days for packing. Batches are lab-verified before shipment.",
       "Payment terms: a down payment is normally required to start production; please tell us your preference.",
       p.missing.length ? `\nTo finalise the quote, could you confirm: ${p.missing.join(", ")}?` : "", "",
@@ -62,18 +60,16 @@ export default async function Inquiry({ params }: { params: Promise<{ id: string
 
       {q && prod && (
         <>
-          <h3>Price check (your markup rule)</h3>
+          <h3>Price check</h3>
           <table>
             <tbody>
-              <tr><td>Your list price ({prod.name}{withInner ? ", with inner boxes" : ""}), FOB Central Java</td><td className="num"><b>USD {q.listFobUsdT}/t</b></td></tr>
+              <tr><td>Your list price ({prod.name}{withInner ? ", with inner boxes" : ""}), FOB Central Java, freight not included</td><td className="num"><b>USD {q.listFobUsdT}/t</b></td></tr>
               <tr><td>Supplier price (stored)</td><td className="num">USD {q.supplierPriceUsdT}/t</td></tr>
-              <tr><td>Your markup at list price</td><td className="num"><b>{q.markupPct}%</b></td></tr>
-              <tr><td>Negotiation floor (min markup {s.settings.markup[prod.category].minPct}% or max discount {s.settings.maxDiscountPct}%, whichever is tighter)</td><td className="num">USD {q.floorFobUsdT}/t ({q.floorMarkupPct}% markup)</td></tr>
-              {Object.entries(q.yourCostsPerT).map(([k, v]) => <tr key={k}><td className="mute">Your cost: {k}</td><td className="num">{v}/t</td></tr>)}
-              {q.freightPerT > 0 && <tr><td className="mute">Ocean freight{p.incoterm === "CIF" ? " + insurance" : ""} added to the offer (pass-through)</td><td className="num">{q.freightPerT}/t</td></tr>}
-              <tr><th>Offer to buyer ({p.incoterm ?? "FOB"})</th><th className="num">USD {q.offerUsdT}/t</th></tr>
-              <tr><td>Expected gross margin / after your costs</td><td className="num">{usd(q.grossMarginUsd)} / {usd(q.netMarginUsd)}</td></tr>
-              {q.targetMarkupPct !== null && <tr><td>Buyer's target {p.targetPriceUsdT} ({p.incoterm ?? "FOB"}) = {q.targetFobUsdT} FOB, markup</td><td className="num">{q.targetMarkupPct}%</td></tr>}
+              <tr><td>Your markup at list price</td><td className="num"><b>{q.markupPct}%</b> (USD {q.grossMarginPerT}/t)</td></tr>
+              <tr><td>Negotiation floor (max discount {s.settings.maxDiscountPct}% or min markup {s.settings.minMarkupPct}%, whichever is higher)</td><td className="num">USD {q.floorFobUsdT}/t ({q.floorMarkupPct}% markup)</td></tr>
+              <tr><th>Offer to buyer (FOB Central Java)</th><th className="num">USD {q.listFobUsdT}/t</th></tr>
+              <tr><td>Expected gross margin on {p.qtyT} t</td><td className="num">{usd(q.grossMarginUsd)}</td></tr>
+              {q.targetMarkupPct !== null && <tr><td>Buyer's target {p.targetPriceUsdT}: markup at that price</td><td className="num">{q.targetMarkupPct}%</td></tr>}
             </tbody>
           </table>
           {q.verdictText && <p><span className={"tag " + (q.verdict === "accept" ? "ok" : q.verdict === "decline" ? "high" : "medium")}>{q.verdict}</span><b>{q.verdictText}</b></p>}
@@ -85,7 +81,7 @@ export default async function Inquiry({ params }: { params: Promise<{ id: string
           <h3>Draft reply</h3>
           <pre>{reply}</pre>
           <div className="row">
-            <ActionButton url={`/api/inquiries/${id}/order`} body={{ productId: prod.id, priceUsdT: q.verdict === "accept" && q.targetFobUsdT ? q.targetFobUsdT : q.listFobUsdT }} label="Buyer agreed: propose creating the order" />
+            <ActionButton url={`/api/inquiries/${id}/order`} body={{ productId: prod.id, priceUsdT: q.verdict === "accept" && p.targetPriceUsdT ? p.targetPriceUsdT : q.listFobUsdT }} label="Buyer agreed: propose creating the order" />
           </div>
         </>
       )}

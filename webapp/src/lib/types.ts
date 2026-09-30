@@ -30,10 +30,10 @@ export interface Product {
   altLabel?: string;
   supplierId: string;
   backupSupplierId?: string;
-  supplierPriceUsdT: number;   // what you pay the supplier
+  supplierPriceUsdT: number;   // what you pay the supplier (master box)
+  supplierPriceAltUsdT?: number; // supplier price for the inner-box variant
+  supplierNote?: string;
 }
-
-export interface MarkupPolicy { targetPct: number; minPct: number; maxPct: number }
 
 export interface ParsedRfq {
   category: Category | null;
@@ -108,18 +108,12 @@ export interface Channel {
 }
 
 export interface Settings {
-  marginTargetPct: number;
+  maxDiscountPct: number;      // most you will concede off the list price in negotiation
+  minMarkupPct: number;        // never sell below supplier price + this markup
   bagKg: number;
-  packingUsdPerT: number;
-  labUsdPerBatch: number;
-  maxDiscountPct: number;
-  inlandUsdPerContainer: number;
-  portThcUsdPerContainer: number;
-  docsUsdPerShipment: number;
-  markup: Record<Category, MarkupPolicy>;
   approvalValueUsd: number;
+  idrPerUsd: number;           // used for supplier quotes given in IDR
   priorityMarkets: string[];
-  freightUsdPerContainer: Record<string, number>;   // by destination country (user-entered quotes)
   verifiedClaims: string[];
 }
 

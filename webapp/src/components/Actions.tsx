@@ -74,7 +74,7 @@ export function SupplierEditor({ p }: { p: { id: string; capacityTPerMonth: numb
   );
 }
 
-export function ProductEditor({ p }: { p: { id: string; listPriceUsdT: number; listPriceAltUsdT?: number; supplierPriceUsdT: number } }) {
+export function ProductEditor({ p }: { p: { id: string; listPriceUsdT: number; listPriceAltUsdT?: number; supplierPriceUsdT: number; supplierPriceAltUsdT?: number } }) {
   const [v, setV] = useState(p);
   const [saved, setSaved] = useState(false);
   const r = useRouter();
@@ -83,6 +83,7 @@ export function ProductEditor({ p }: { p: { id: string; listPriceUsdT: number; l
     <>
       <td><input className="n" type="number" value={v.supplierPriceUsdT} onChange={(e) => set("supplierPriceUsdT", +e.target.value)} /></td>
       <td><input className="n" type="number" value={v.listPriceUsdT} onChange={(e) => set("listPriceUsdT", +e.target.value)} /></td>
+      <td>{v.supplierPriceAltUsdT !== undefined ? <input className="n" type="number" value={v.supplierPriceAltUsdT} onChange={(e) => set("supplierPriceAltUsdT", +e.target.value)} /> : <span className="mute">-</span>}</td>
       <td>{v.listPriceAltUsdT !== undefined ? <input className="n" type="number" value={v.listPriceAltUsdT} onChange={(e) => set("listPriceAltUsdT", +e.target.value)} /> : <span className="mute">-</span>}</td>
       <td><button className="btn alt" onClick={async () => { await fetch(`/api/products/${p.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(v) }); setSaved(true); r.refresh(); }}>{saved ? "Saved" : "Save"}</button></td>
     </>
@@ -120,26 +121,17 @@ export function ContentForm() {
   );
 }
 
-export function SettingsForm({ s, markup }: { s: Record<string, number>; markup: Record<string, { targetPct: number; minPct: number; maxPct: number }> }) {
+export function SettingsForm({ s }: { s: Record<string, number> }) {
   const [v, setV] = useState(s);
-  const [m, setM] = useState(markup);
   const [msg, setMsg] = useState("");
   const r = useRouter();
-  const labels: Record<string, string> = { maxDiscountPct: "Max discount off list price in negotiation (%)", labUsdPerBatch: "Lab test (USD/batch)", inlandUsdPerContainer: "Inland transport to port (USD/container)", portThcUsdPerContainer: "Port THC (USD/container)", docsUsdPerShipment: "Documents (USD/shipment)", bagKg: "Box/bag size on packing list (kg)", approvalValueUsd: "Orders above this value need extra care (USD)" };
+  const labels: Record<string, string> = { maxDiscountPct: "Max discount off list price in negotiation (%)", minMarkupPct: "Never sell below supplier price plus this markup (%)", idrPerUsd: "IDR per USD (for supplier quotes in IDR)", bagKg: "Box/bag size on packing list (kg)", approvalValueUsd: "Orders above this value need extra care (USD)" };
   return (
     <div>
-      <h3>Markup policy over supplier price (%)</h3>
-      <table>
-        <thead><tr><th>Category</th><th>Target</th><th>Minimum (floor)</th><th>Maximum</th></tr></thead>
-        <tbody>{Object.keys(m).map((c) => (
-          <tr key={c}><td>{c}</td>{(["targetPct", "minPct", "maxPct"] as const).map((k) => <td key={k}><input className="n" type="number" step="0.5" value={m[c][k]} onChange={(e) => setM({ ...m, [c]: { ...m[c], [k]: +e.target.value } })} /></td>)}</tr>
-        ))}</tbody>
-      </table>
-      <h3>Costs and rules</h3>
       <table><tbody>{Object.keys(labels).map((k) => (
         <tr key={k}><td>{labels[k]}</td><td><input className="n" type="number" step="any" value={v[k]} onChange={(e) => setV({ ...v, [k]: +e.target.value })} /></td></tr>
       ))}</tbody></table>
-      <button className="btn" onClick={async () => { await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...v, markup: m }) }); setMsg("Saved"); r.refresh(); }}>Save settings</button> <span className="ok">{msg}</span>
+      <button className="btn" onClick={async () => { await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(v) }); setMsg("Saved"); r.refresh(); }}>Save settings</button> <span className="ok">{msg}</span>
     </div>
   );
 }

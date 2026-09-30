@@ -4,13 +4,14 @@ import { floorFob } from "./quote";
 export interface Move { decision: "accept" | "counter" | "hold" | "decline"; offerFobUsdT: number; message: string; floor: number; room: number }
 
 /** Capped concession ladder: hold at list first, then give at most a third of the allowed room per round, never below the floor. */
-export function negotiate(p: Product, s: Settings, counterFob: number, round: number, listFob = p.listPriceUsdT): Move {
-  const floor = floorFob(p, s, listFob);
+export function negotiate(p: Product, s: Settings, counterFob: number, round: number, listFob = p.listPriceUsdT, withInner = false): Move {
+  const floor = floorFob(p, s, listFob, withInner);
   const room = Math.max(0, listFob - floor);
   const step = (r: number) => Math.round(listFob - room * Math.min(1, Math.max(0, (r - 1) / 3)));
   if (counterFob >= listFob) return { decision: "accept", offerFobUsdT: counterFob, message: `Accept USD ${counterFob} FOB: at or above your list price.`, floor, room };
   if (counterFob >= floor && counterFob >= step(round)) return { decision: "accept", offerFobUsdT: counterFob, message: `Accept USD ${counterFob} FOB: within your cap (floor ${floor}).`, floor, room };
-  if (counterFob < p.supplierPriceUsdT) return { decision: "decline", offerFobUsdT: floor, message: `Decline: USD ${counterFob} is below your supplier cost (USD ${p.supplierPriceUsdT}). Restate USD ${listFob} or the floor ${floor} as final.`, floor, room };
+  const sup = withInner && p.supplierPriceAltUsdT ? p.supplierPriceAltUsdT : p.supplierPriceUsdT;
+  if (counterFob < sup) return { decision: "decline", offerFobUsdT: floor, message: `Decline: USD ${counterFob} is below your supplier price (USD ${sup}). Restate USD ${listFob} or the floor ${floor} as final.`, floor, room };
   const next = step(round + 1 > 4 ? 4 : round + 1);
   const final = next <= floor;
   return {

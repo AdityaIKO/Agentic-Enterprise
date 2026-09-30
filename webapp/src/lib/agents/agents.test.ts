@@ -29,28 +29,33 @@ test("RFQ parser: grade, quantity, terms, MOQ", () => {
   assert.ok(g.missing.includes("grade"));
 });
 
-test("markups follow your policy for the seeded price sheet", () => {
-  const t = marginTable(s.products, s.settings);
-  assert.ok(t.every((r) => r.inPolicy));
-  const coco = t.find((r) => r.product.id === "coco-premium")!;
-  assert.ok(Math.abs(coco.markupPct - 10) < 0.5);
-  const hard = t.find((r) => r.product.id === "hard-halaban")!;
-  assert.ok(hard.markupPct >= 25 && hard.markupPct <= 40);
+test("markups are what your list and supplier prices imply (they differ per grade)", () => {
+  const t = marginTable(s.products);
+  const m = (id: string) => t.find((r) => r.product.id === id)!;
+  assert.ok(Math.abs(m("coco-premium").markupPct - 7.4) < 0.1);
+  assert.ok(Math.abs(m("saw-ab").markupPct - 9.0) < 0.1);
+  assert.ok(m("hard-halaban").markupPct > 25);
+  assert.ok(new Set(t.map((r) => r.markupPct)).size > 5, "markups should not be a single fixed percentage");
+  assert.ok(t.every((r) => r.marginPerT > 0));
+  assert.equal(m("coco-platinum").variants.length, 2);
 });
 
-test("quote: floor is tight and verdicts follow it", () => {
+test("quote: freight is never added; floor and verdicts follow the cap", () => {
   const p = prod("coco-premium");
   const floor = floorFob(p, s.settings, p.listPriceUsdT);
-  assert.ok(floor >= p.listPriceUsdT * (1 - s.settings.maxDiscountPct / 100) - 1);
-  assert.ok(floor > p.supplierPriceUsdT * 1.08);
+  assert.ok(floor >= Math.ceil(p.listPriceUsdT * (1 - s.settings.maxDiscountPct / 100)));
+  assert.ok(floor > p.supplierPriceUsdT);
   const base = { product: p, qtyT: 12, container: "20ft" as const, incoterm: "FOB" as const, country: "Germany" };
+  const listOnly = quote(base, s.settings);
+  assert.equal(listOnly.listFobUsdT, 1450);
+  assert.equal(quote({ ...base, incoterm: "CIF" }, s.settings).listFobUsdT, 1450, "CIF request must not change the price");
   assert.equal(quote({ ...base, targetPriceUsdT: p.listPriceUsdT }, s.settings).verdict, "accept");
-  const low = quote({ ...base, targetPriceUsdT: floor - 60 }, s.settings);
+  const low = quote({ ...base, targetPriceUsdT: floor - 20 }, s.settings);
   assert.equal(low.verdict, "counter");
   assert.ok(low.counterUsdT! >= floor);
   assert.equal(quote({ ...base, targetPriceUsdT: p.supplierPriceUsdT - 10 }, s.settings).verdict, "decline");
-  const cif = quote({ ...base, incoterm: "CIF" }, s.settings);
-  assert.ok(cif.offerUsdT > p.listPriceUsdT && cif.freightPerT > 0);
+  const inner = quote({ ...base, withInner: true }, s.settings);
+  assert.equal(inner.listFobUsdT, 1600); assert.equal(inner.supplierPriceUsdT, 1500);
 });
 
 test("negotiation never concedes below the floor", () => {

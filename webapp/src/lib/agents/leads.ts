@@ -78,7 +78,6 @@ export function scoreLead(l: Partial<Lead>, s: Settings): { score: number; tier:
   else if (t === "retailer") flags.push("retailer: usually too small for container orders");
 
   if (l.country && s.priorityMarkets.some((m) => m.toLowerCase() === l.country!.toLowerCase())) add(15, `priority market (${l.country})`);
-  else if (l.country && s.freightUsdPerContainer[l.country] !== undefined) add(5, "market with a stored freight rate");
 
   if (/purchas|procure|import|sourcing|buyer|owner|founder|director|ceo|managing|head of/i.test(l.contactTitle ?? "")) add(10, `decision-maker title (${l.contactTitle})`);
   if (l.email) { if (FREE_MAIL.test(l.email)) add(2, "email (free mailbox)"); else add(5, "business email"); }

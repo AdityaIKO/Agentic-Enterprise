@@ -7,8 +7,8 @@ with your people. The agents read your data, compute, draft, and file *proposals
 | Agent | What it does for you |
 |---|---|
 | Lead finder | Imports importer/distributor lists (LinkedIn Sales Navigator exports, trade data), discovers more through a web-search API, checks the legal entity in GLEIF, scans public websites, scores and ranks leads (tier A/B/C with visible reasons), drafts a 3-message outreach sequence |
-| RFQ agent | Reads a buyer's e-mail/WhatsApp text, extracts grade, quantity, port, terms, price, deadline; checks the MOQ; prices it with your list price and markup; drafts the reply |
-| Negotiation agent | Capped concessions: holds list price first, never goes below your floor (min markup or max discount, whichever is tighter) |
+| RFQ agent | Reads a buyer's e-mail/WhatsApp text, extracts grade, quantity, port, terms, price, deadline; checks the MOQ; prices it at your FOB list price (no freight added); drafts the reply |
+| Negotiation agent | Capped concessions: holds list price first, never goes below your floor |
 | Sales agent | Turns an agreed quote into an order proposal with a down-payment invoice |
 | Procurement agent | Picks the supplier (primary, else backup) by lead time and monthly capacity, drafts the purchase order, tracks supplier confirmation |
 | Documents agent | HS code suggestion, document checklist by destination, invoice and packing-list drafts |
@@ -18,7 +18,7 @@ with your people. The agents read your data, compute, draft, and file *proposals
 | Governance | Approval inbox, hash-chained audit log, daily briefing that ranks what needs attention |
 
 ## Your business model in the app
-One or two suppliers per product, each able to fill a container. You earn a markup over the supplier price (defaults: coconut 10%, sawdust 7-10%, hardwood 25-40%) and negotiation is capped tightly. List prices are your September 2026 price sheet (FOB Central Java). **Supplier prices in the seed data are demo values**: enter the real ones in Products.
+One or two suppliers per product, each able to fill a container. You buy at the supplier price and sell at your list price (USD/MT, **FOB Central Java, freight not included**); your income is the difference, so the markup differs per grade (roughly 6-10% on coconut and sawdust, higher on hardwood with the current sheets). Negotiation is capped: the floor is the higher of "supplier price + minimum markup" and "list price less the maximum discount" (defaults 5% and 1.5%: assumptions, change them in Settings). Prices come from your price sheets; hardwood supplier quotes are IDR at 17,500 per USD and are assumed per MT.
 
 ## Run locally
 ```

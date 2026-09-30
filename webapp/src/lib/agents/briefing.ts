@@ -33,7 +33,7 @@ export function briefing(s: Store): BriefItem[] {
       out.push({ agent: "Procurement", priority: tight || dl < 14 ? 1 : 2, text: `${o.id} (${o.buyer}, ${o.qtyT} t): no purchase order to the supplier yet; ${dl} days to the latest shipment date${tight ? ", and lead time is already tight" : ""}.`, href: `/orders/${o.id}` });
     }
     if (o.poStatus === "sent") out.push({ agent: "Procurement", priority: 2, text: `${o.id}: purchase order sent, supplier has not confirmed yet.`, href: `/orders/${o.id}` });
-    if (pr && o.priceUsdT < pr.supplierPriceUsdT * (1 + s.settings.markup[o.category].minPct / 100) - 0.5) out.push({ agent: "Pricing", priority: 1, text: `${o.id} is priced below your minimum markup (${s.settings.markup[o.category].minPct}%).`, href: `/orders/${o.id}` });
+    if (pr && o.priceUsdT < pr.supplierPriceUsdT * (1 + s.settings.minMarkupPct / 100) - 0.5) out.push({ agent: "Pricing", priority: 1, text: `${o.id} is priced below your minimum markup (${s.settings.minMarkupPct}% over supplier price).`, href: `/orders/${o.id}` });
   }
   const hot = s.leads.filter((l) => l.tier === "A" && ["new", "verified"].includes(l.status)).length;
   if (hot) out.push({ agent: "Lead finder", priority: 2, text: `${hot} tier-A lead(s) not contacted yet.`, href: "/leads" });
@@ -43,7 +43,7 @@ export function briefing(s: Store): BriefItem[] {
   if (gap.totalGapUsd > 0) out.push({ agent: "Finance", priority: 2, text: `Producer payments for open orders exceed down payments received by about USD ${gap.totalGapUsd.toLocaleString("en-US")}.`, href: "/finance" });
   const plan = budgetPlan(s.channels, 500);
   const best = [...plan].sort((a, b) => b.probBestPct - a.probBestPct)[0];
-  const mt = marginTable(s.products, s.settings).sort((x, y) => y.marginPerContainer - x.marginPerContainer)[0];
+  const mt = marginTable(s.products).sort((x, y) => y.marginPerContainer - x.marginPerContainer)[0];
   if (mt) out.push({ agent: "Pricing", priority: 3, text: `Highest margin per 40ft container: ${mt.product.name} (USD ${mt.marginPerContainer.toLocaleString("en-US")}, markup ${mt.markupPct}%).`, href: "/products" });
   if (best) out.push({ agent: "Marketing", priority: 3, text: `Best channel so far: ${best.channel} (${best.probBestPct}% chance of being best). Suggested weekly share ${best.suggestedPct}%.`, href: "/marketing" });
   return out.sort((a, b) => a.priority - b.priority);

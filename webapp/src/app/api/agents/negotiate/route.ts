@@ -9,5 +9,5 @@ export async function POST(req: Request) {
   const s = load();
   const p = s.products.find((x) => x.id === productId);
   if (!p || !counterFob) return NextResponse.json({ error: "product and counter price required" }, { status: 400 });
-  return NextResponse.json(negotiate(p, s.settings, counterFob, round || 1, withInner && p.listPriceAltUsdT ? p.listPriceAltUsdT : p.listPriceUsdT));
+  return NextResponse.json(negotiate(p, s.settings, counterFob, round || 1, withInner && p.listPriceAltUsdT ? p.listPriceAltUsdT : p.listPriceUsdT, Boolean(withInner)));
 }

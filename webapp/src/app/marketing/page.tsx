@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default function Marketing() {
   const s = load();
   const plan = budgetPlan(s.channels, 500);
-  const mt = marginTable(s.products, s.settings).sort((a, b) => b.marginPerContainer - a.marginPerContainer);
+  const mt = marginTable(s.products).sort((a, b) => b.marginPerContainer - a.marginPerContainer);
   const props = s.proposals.filter((p) => p.status === "pending" && p.agent === "Marketing agent");
   return (
     <div>
