@@ -8,7 +8,7 @@ warehouse scheduling, compliance/HS classification, carrier selection, and gover
 identical scenarios: manual (WhatsApp admin), single agent (stale registry), multi-agent (live bids).
 
 ## Deliverables
-- `docs/Laporan_Tugas1.pdf` – report (Indonesian)
+- `docs/Laporan_Tugas1.pdf` – research-paper style report (Indonesian): identity, problem, SOTA (14 DOI-verified refs), objectives, system design (flow, agents, I/O contract, cognitive load, schedule/approval, negotiation), experiments
 - `docs/Presentasi_Tugas1.pptx` – slides
 - `src/xpora_mas/` – code; `tests/` – 26 tests; `outputs/` – results, figures
 

@@ -60,18 +60,18 @@ EXEC = [
 ]
 
 TUGAS_MAP = [
-    ("Gunakan topik yang dipilih", "Topik: XCMAS, sistem multi-agen konsolidasi ekspor UMKM (venture Xpora; kalibrasi KrakaCoal). Tidak diambil kelompok 1-6.", "Bagian 2.1"),
+    ("Gunakan topik yang dipilih", "Topik: XCMAS, sistem multi-agen konsolidasi ekspor UMKM (venture Xpora; kalibrasi KrakaCoal). Tidak diambil kelompok 1-6.", "Bagian 1, 2"),
     ("Upload laporan progres", "Dokumen ini (PDF) + slide (PPTX) + kode GitHub", "-"),
     ("Peran anggota tim", "Pengerjaan individu; enam peran template Project #1 dipegang satu orang", "Bagian 1"),
     ("Deskripsi problem", "MOQ trap, legalitas, kualitas, alokasi kuota; KPI, klasifikasi lingkungan, PEAS", "Bagian 2"),
-    ("Ilustrasi data dan perhitungan komputasi", "Sumber data (Xpora/KrakaCoal/asumsi), 13 contoh hitung manual, simulasi penuh", "Bagian 3"),
-    ("Rumus notasi dan arti simbol", "30 rumus dikelompokkan A-H, tiap simbol dijelaskan", "Bagian 4"),
-    ("Tiga penelitian topik serupa", "Hathikal 2020; Lee 2024; Ouelhadj & Petrovic 2009", "Bagian 5"),
-    ("Mengapa single vs multi-agent", "Kriteria Bab 4 + bukti eksperimen (informasi segar, ketahanan, skala, batas organisasi)", "Bagian 6.1"),
-    ("Tiga penelitian agen cerdas", "Smith 1980; Leitao 2009; Zhao 2024", "Bagian 6.2"),
-    ("Diagram rencana sistem", "Arsitektur, Contract Net kuota produsen, siklus BDI, Gantt", "Bagian 6.3"),
-    ("Komponen internal tiap agen", "Tabel 11 agen: BDI, komponen, I/O, metode, otonomi", "Bagian 6.4"),
-    ("AI / ML / DL dan alasannya", "Portofolio metode (ML, RL, LLM, CV) + alasan tidak memakai DL sekarang", "Bagian 6.6"),
+    ("Tiga penelitian topik serupa dan SOTA", "Hathikal 2020; Lee 2024; Ivanov & Dolgui 2021 (+11 referensi, semua ber-DOI, jurnal Q1-Q3)", "Bagian 3"),
+    ("Tujuan proyek", "Tujuan umum, enam tujuan khusus terukur, empat hipotesis", "Bagian 4"),
+    ("Diagram rencana sistem dan alur", "Arsitektur, alur end-to-end 14 langkah, Contract Net, siklus BDI", "Bagian 5.1"),
+    ("Komponen internal tiap agen; AI/ML/DL dan alasannya", "Tabel 11 agen; portofolio metode dan alasan", "Bagian 5.2"),
+    ("Kontrak input, cognitive overload, jadwal dan approval, negosiasi", "Kontrak I/O pengguna, desain beban kognitif, SLA dan eskalasi, CNP, keamanan", "Bagian 5.3-5.6"),
+    ("Mengapa single vs multi-agent; tiga penelitian agen cerdas", "Kriteria Bab 4 + bukti eksperimen; Smith 1980, Leitao 2009, Wang 2024", "Bagian 5.7, 3.2"),
+    ("Ilustrasi data dan perhitungan komputasi", "Sumber data (Xpora/KrakaCoal/asumsi), contoh hitung manual, simulasi penuh", "Bagian 6"),
+    ("Rumus notasi dan arti simbol", "30 rumus dikelompokkan A-H, tiap simbol dijelaskan", "Bagian 7"),
 ]
 ROLES = [
     ("Leader / product owner", "Memilih topik dari venture sendiri (Xpora, KrakaCoal), merumuskan masalah dan KPI."),
@@ -159,7 +159,7 @@ pdm, qct, ca, ro, co, tr, qo, ql, ng, mm, ot, sn = W["producers"], W["qc_trust"]
 def _row(r): return f"{r['name']}: rate {n(r['rate'],0)} kg/hari, tawaran {n(r['offer'],0,'',True)} kg, harga {n(r['price'],2)}, q {n(r['q'],2)}, skor {n(r['score'],3)}"
 WORKED = [
     ("1. Kebutuhan dengan buffer (over-allocation)",
-     f"Order 20 t (Q = 20.000 kg), buffer awal b = 15%: N_0 = 20.000 x 1,15 = 23.000 kg. Alasan: rata-rata sekitar 2 produsen per order gagal kirim dan ~6% kg ditolak QC; tanpa buffer OTIF turun (lihat sweep buffer, Bagian 7). "
+     f"Order 20 t (Q = 20.000 kg), buffer awal b = 15%: N_0 = 20.000 x 1,15 = 23.000 kg. Alasan: rata-rata sekitar 2 produsen per order gagal kirim dan ~6% kg ditolak QC; tanpa buffer OTIF turun (lihat sweep buffer, Bagian 8). "
      "Putaran susulan hanya menutup kekurangan nyata: N_k = (Q - kg lolos QC) x 1,05."),
     ("2. Alokasi kuota multi-agen (bid dengan kapasitas nyata)",
      f"Lot {n(pdm['need'],0,'',True)} kg, jendela {pdm['window']:.0f} hari. Lima produsen menawar: " + "; ".join(_row(r) for r in pdm["rows"]) +
@@ -203,36 +203,85 @@ WORKED = [
 ]
 
 # ============================================================ related work
-RELATED_PROBLEM = [
-    ("Hathikal, S., Chung, S. H., & Karczewski, M. (2020). Prediction of ocean import shipment lead time using machine learning methods. SN Applied Sciences, 2, 1272.",
-     "Memprediksi lead time pengiriman laut dengan regresi logistik multinomial, pohon keputusan, SVM, Naive Bayes, dan k-NN untuk shipper, carrier, forwarder, dan consignee.",
-     "Dasar pemakaian model klasik/explainable untuk risiko pengiriman: Risk Agent memakai regresi logistik untuk peluang roll-over.",
-     "https://link.springer.com/article/10.1007/s42452-020-2951-5"),
-    ("Lee, E., Kim, S., Kim, S., Jung, S., Kim, H., & Cha, M. (2024). Explainable Product Classification for Customs. ACM Transactions on Intelligent Systems and Technology, 15(2), Art. 25. doi:10.1145/3635158.",
-     "Model XAI untuk membantu petugas bea cukai menetapkan 6 digit kode HS dari deskripsi barang, disertai alasan yang dapat dibaca.",
-     "Dasar Compliance Agent: klasifikasi teks HS lintas komoditas dengan confidence dan eskalasi ke manusia (selective classification); relevan untuk klaim Xpora bahwa arsitektur agnostik komoditas.",
-     "https://dl.acm.org/doi/10.1145/3635158"),
-    ("Ouelhadj, D., & Petrovic, S. (2009). A survey of dynamic scheduling in manufacturing systems. Journal of Scheduling, 12, 417-431. doi:10.1007/s10951-008-0090-8.",
-     "Tinjauan penjadwalan dinamis (heuristik, meta-heuristik, sistem multi-agen, teknik AI lain) saat terjadi gangguan seperti kerusakan mesin dan order mendadak.",
-     "Dasar penjadwalan reaktif: re-kontrak pekerjaan saat produsen gagal kirim atau lini gudang rusak, dan critical ratio.",
-     "https://link.springer.com/article/10.1007/s10951-008-0090-8"),
+# SOTA: setiap entri diverifikasi (judul, jurnal, volume/halaman, DOI) melalui pencarian web pada sesi pengerjaan.
+# Kuartil = perkiraan SJR (Scimago) dari pengetahuan penulis; mohon dicek ulang di scimagojr.com sebelum pengumpulan.
+# (id, kelompok, sitasi APA, jurnal, kuartil, DOI, temuan, celah/relevansi)
+SOTA_ROWS = [
+ ("Smith1980", "B", "Smith, R. G. (1980). The Contract Net Protocol: High-level communication and control in a distributed problem solver. IEEE Transactions on Computers, C-29(12), 1104-1113.",
+  "IEEE Trans. Computers", "Q1", "10.1109/TC.1980.1675516",
+  "Alokasi tugas terdesentralisasi: manajer mengumumkan tugas (CFP), kontraktor menawar, pemenang dipilih; dapat re-kontrak bila gagal.",
+  "Protokol inti XCMAS untuk kuota produsen, dispatch lini gudang, dan pemilihan carrier. Celah: tidak membahas quality score, buffer, atau batas konsentrasi; XCMAS menambahkannya."),
+ ("Leitao2009", "B", "Leitão, P. (2009). Agent-based distributed manufacturing control: A state-of-the-art survey. Engineering Applications of Artificial Intelligence, 22(7), 979-991.",
+  "Eng. Appl. Artif. Intell.", "Q1", "10.1016/j.engappai.2008.09.005",
+  "Survei kontrol manufaktur berbasis agen: fleksibilitas dan reaksi terhadap gangguan, tetapi adopsi industri terbatas oleh integrasi dan validasi.",
+  "Menjustifikasi produsen/lini sebagai unit otonom dan pendekatan hibrida. Celah: fokus satu pabrik; belum konsorsium lintas UMKM dengan data kapasitas berubah."),
+ ("Dorri2018", "B", "Dorri, A., Kanhere, S. S., & Jurdak, R. (2018). Multi-agent systems: A survey. IEEE Access, 6, 28573-28593.",
+  "IEEE Access", "Q1", "10.1109/ACCESS.2018.2831228",
+  "Survei definisi, fitur, komunikasi, tantangan (keamanan, skalabilitas, koordinasi) dan evaluasi MAS.",
+  "Dasar kriteria evaluasi dan tantangan MAS (keamanan pesan, skala) yang diuji pada Bagian 8. Celah: survei umum, tanpa studi kasus ekspor UMKM."),
+ ("Swaminathan1998", "B", "Swaminathan, J. M., Smith, S. F., & Sadeh, N. M. (1998). Modeling supply chain dynamics: A multiagent approach. Decision Sciences, 29(3), 607-632.",
+  "Decision Sciences", "Q1", "10.1111/j.1540-5915.1998.tb01356.x",
+  "Pustaka agen rantai pasok yang modular untuk memodelkan dinamika dan kebijakan pengendalian (simulasi).",
+  "Mendukung pemodelan pemasok/pabrik/pengirim sebagai agen dalam simulasi. Celah: tidak ada bid kapasitas live vs registry, dan tidak ada komoditas ekspor perishable."),
+ ("Jennings2001", "B", "Jennings, N. R., Faratin, P., Lomuscio, A. R., Parsons, S., Wooldridge, M. J., & Sierra, C. (2001). Automated negotiation: Prospects, methods and challenges. Group Decision and Negotiation, 10(2), 199-215.",
+  "Group Decis. Negot.", "Q2", "10.1023/A:1008746126376",
+  "Kerangka negosiasi otomatis (protokol, objek negosiasi, model keputusan agen) dan tantangannya.",
+  "Dasar Sales Agent (konsesi bergantung waktu, Nash bargaining, batas kebijakan). Celah: tanpa evaluasi bisnis; XCMAS mengukur konversi pada simulasi."),
+ ("Wang2024", "B", "Wang, L., Ma, C., Feng, X., Zhang, Z., Yang, H., Zhang, J., ... Wen, J. (2024). A survey on large language model based autonomous agents. Frontiers of Computer Science, 18(6), 186345.",
+  "Front. Comput. Sci.", "Q1", "10.1007/s11704-024-40231-1",
+  "Kerangka terpadu agen berbasis LLM (profil, memori, perencanaan, aksi) dan aplikasi rekayasa/sosial.",
+  "Dasar Virtual SDR (LLM sebagai lapisan bahasa). Celah: kontrol dan keamanan aksi masih terbuka; XCMAS membatasi LLM dengan guardrail dan aturan deterministik."),
+ ("Watkins1992", "B", "Watkins, C. J. C. H., & Dayan, P. (1992). Q-learning. Machine Learning, 8(3-4), 279-292.",
+  "Machine Learning", "Q1", "10.1007/BF00992698",
+  "Bukti konvergensi Q-learning pada MDP diskret bila semua aksi dicoba berulang kali.",
+  "Dasar Learning Agent (keputusan lembur). Celah: MDP abstrak tidak otomatis bertransfer ke simulator; XCMAS melatih online di simulator (Bagian 8.6)."),
+ ("Nash1950", "B", "Nash, J. F. (1950). The bargaining problem. Econometrica, 18(2), 155-162.",
+  "Econometrica", "Q1", "10.2307/1907266",
+  "Solusi tawar-menawar yang memaksimalkan hasil kali surplus kedua pihak (aksioma Nash).",
+  "Titik referensi harga sepakat pada negosiasi penjual-pembeli."),
+ ("Hathikal2020", "A", "Hathikal, S., Chung, S. H., & Karczewski, M. (2020). Prediction of ocean import shipment lead time using machine learning methods. SN Applied Sciences, 2, 1272.",
+  "SN Appl. Sci.", "Q2", "10.1007/s42452-020-2951-5",
+  "Memprediksi lead time pengiriman laut dengan regresi logistik, pohon keputusan, SVM, Naive Bayes, k-NN untuk shipper, carrier, forwarder, consignee.",
+  "Mendukung model klasik/explainable untuk risiko pengiriman (Risk Agent: regresi logistik roll-over). Celah: prediksi tunggal, tidak terhubung ke keputusan kontrak dan re-kontrak."),
+ ("Lee2024", "A", "Lee, E., Kim, S., Kim, S., Jung, S., Kim, H., & Cha, M. (2024). Explainable product classification for customs. ACM Transactions on Intelligent Systems and Technology, 15(2), Art. 25.",
+  "ACM Trans. Intell. Syst. Technol.", "Q1", "10.1145/3635158",
+  "Model XAI untuk membantu petugas bea cukai menetapkan subheading HS (top-3 akurasi 93,9% pada 925 subheading sulit) dengan penjelasan yang dapat dibaca.",
+  "Dasar Compliance Agent (klasifikasi teks HS dengan confidence dan eskalasi). Celah: alat bantu petugas bea cukai, bukan bagian dari alur ekspor UMKM yang otomatis."),
+ ("Ivanov2021", "A", "Ivanov, D., & Dolgui, A. (2021). A digital supply chain twin for managing the disruption risks and resilience in the era of Industry 4.0. Production Planning & Control, 32(9), 775-788.",
+  "Prod. Plan. Control", "Q1", "10.1080/09537287.2020.1768450",
+  "Konsep digital supply chain twin: model komputasi yang merepresentasikan keadaan jaringan waktu-nyata untuk mengelola gangguan dan ketahanan.",
+  "Mendukung pendekatan simulasi digital twin sebagai lingkungan uji (Bagian 8). Celah: level jaringan besar; tidak menyentuh konsolidasi UMKM dan negosiasi kuota."),
+ ("Ouelhadj2009", "A", "Ouelhadj, D., & Petrovic, S. (2009). A survey of dynamic scheduling in manufacturing systems. Journal of Scheduling, 12(4), 417-431.",
+  "J. Scheduling", "Q2", "10.1007/s10951-008-0090-8",
+  "Tinjauan penjadwalan dinamis (heuristik, meta-heuristik, sistem multi-agen) saat terjadi gangguan seperti kerusakan mesin dan order mendadak.",
+  "Dasar penjadwalan reaktif gudang (critical ratio, re-kontrak saat lini rusak). Celah: tidak mencakup hulu (sumber bahan dari UMKM)."),
+ ("Dominguez2020", "A", "Dominguez, R., & Cannella, S. (2020). Insights on multi-agent systems applications for supply chain management. Sustainability, 12(5), 1935.",
+  "Sustainability", "Q1", "10.3390/su12051935",
+  "Tinjauan sistematis penerapan MAS pada rantai pasok: penjadwalan, koordinasi antarperusahaan, pemenuhan order, seleksi pemasok, ketahanan.",
+  "Memetakan ruang riset; menunjukkan kebutuhan validasi MAS pada konteks UMKM ekspor. Celah: sedikit studi dengan kalibrasi pada bisnis nyata dan komoditas perishable."),
+ ("Pergelova2019", "A", "Pergelova, A., Manolova, T., Simeonova-Ganeva, R., & Yordanova, D. (2019). Democratizing entrepreneurship? Digital technologies and the internationalization of female-led SMEs. Journal of Small Business Management, 57(1), 14-39.",
+  "J. Small Bus. Manage.", "Q1", "10.1111/jsbm.12494",
+  "Kapabilitas digital meningkatkan internasionalisasi (ekspor) UMKM di pasar berkembang.",
+  "Motivasi bisnis Xpora: teknologi digital menurunkan hambatan ekspor UMKM. Celah: studi survei; tidak menawarkan mekanisme koordinasi operasional."),
 ]
-RELATED_AGENT = [
-    ("Smith, R. G. (1980). The Contract Net Protocol: High-level communication and control in a distributed problem solver. IEEE Transactions on Computers, C-29(12), 1104-1113.",
-     "Alokasi tugas terdesentralisasi: manajer mengumumkan tugas (CFP), kontraktor menawar, pemenang dipilih; dapat re-kontrak bila gagal.",
-     "Protokol inti XCMAS untuk kuota produsen UMKM, dispatch lini gudang, dan pemilihan carrier (Bab 4 bagian Contract Net).",
-     ""),
-    ("Leitao, P. (2009). Agent-based distributed manufacturing control: A state-of-the-art survey. Engineering Applications of Artificial Intelligence, 22(7), 979-991.",
-     "Survei kontrol manufaktur terdistribusi berbasis agen: fleksibilitas, kemampuan bereaksi terhadap gangguan, dan tantangan integrasi.",
-     "Menjustifikasi produsen/lini sebagai unit otonom dan pendekatan hibrida (koordinasi terdesentralisasi + kontrol ringan).",
-     "https://doi.org/10.1016/j.engappai.2009.05.005"),
-    ("Zhao, Z., Tang, D., Liu, C., Wang, L., Zhang, Z., Zhu, H., Chen, K., Nie, Q., & Ji, Y. (2024). A Large Language Model-based multi-agent manufacturing system for intelligent shopfloor. arXiv:2405.16887.",
-     "Sistem multi-agen berbasis LLM untuk shopfloor pintar dengan modul agen dan cara kolaborasi, meminimalkan intervensi manusia.",
-     "Arah lanjutan: LLM sebagai lapisan bahasa (Virtual SDR, ekstraksi dokumen, penjelasan) yang tetap dibatasi kebijakan dan aturan deterministik.",
-     "https://arxiv.org/abs/2405.16887"),
+SOTA_BY = {r[0]: r for r in SOTA_ROWS}
+def doi_url(d): return "https://doi.org/" + d
+def sota_rel(ids): return [(SOTA_BY[i][2] + " doi:" + SOTA_BY[i][5], SOTA_BY[i][6], SOTA_BY[i][7], doi_url(SOTA_BY[i][5])) for i in ids]
+# Tugas 1 meminta tiga penelitian serupa (topik) dan tiga penelitian agen cerdas
+RELATED_PROBLEM = sota_rel(["Hathikal2020", "Lee2024", "Ivanov2021"])
+RELATED_AGENT = sota_rel(["Smith1980", "Leitao2009", "Wang2024"])
+SOTA_TABLE = [["Referensi (APA)", "Jurnal / kuartil*", "DOI", "Temuan dan celah terhadap XCMAS"]] + [
+    [r[2], f"{r[3]} ({r[4]})", r[5], r[6] + " Celah/relevansi: " + r[7]] for r in SOTA_ROWS]
+CITE_NOTE = ("Verifikasi: judul, jurnal, volume/halaman, dan DOI seluruh 14 referensi dicek melalui pencarian web pada sesi pengerjaan (penelusuran DOI langsung ke Crossref diblokir dari lingkungan kerja). "
+             "*Kuartil adalah perkiraan berdasarkan SJR (Scimago) dari pengetahuan penulis, bukan hasil pengecekan langsung; mohon diverifikasi di scimagojr.com untuk tahun terbitan yang relevan sebelum pengumpulan. "
+             "Hathikal dkk. terbit di SN Applied Sciences (kini Discover Applied Sciences).")
+SOTA_GAP = [
+    "Celah 1: literatur MAS manufaktur/rantai pasok (Leitão, 2009; Swaminathan dkk., 1998; Dominguez dkk., 2020) berfokus pada pabrik atau jaringan perusahaan besar; konsolidasi puluhan UMKM dengan kapasitas yang berubah dan tanpa data terpusat belum divalidasi secara kuantitatif.",
+    "Celah 2: nilai desentralisasi biasanya diklaim, bukan diukur; XCMAS mengisolasi nilainya (bid live vs registry usang) dengan aturan keputusan yang sama pada agen tunggal dan multi-agen, sehingga selisih hanya berasal dari arsitektur.",
+    "Celah 3: model ML logistik ekspor (Hathikal dkk., 2020; Lee dkk., 2024) berdiri sendiri; XCMAS menanamkannya sebagai komponen agen (Risk dan Compliance) yang memicu tindakan (re-kontrak, eskalasi ke manusia, pilihan carrier).",
+    "Celah 4: adopsi LLM pada agen (Wang dkk., 2024) belum disertai kontrol aksi yang dapat diaudit; XCMAS membatasi LLM dengan guardrail, otonomi berlevel, dan audit log berantai-hash.",
+    "Celah 5: bukti pada bisnis nyata kecil; kasus dikalibrasi dari Xpora (tempe) dan KrakaCoal (arang) dengan mesin yang sama untuk dua komoditas.",
 ]
-CITE_NOTE = ("Verifikasi: metadata Hathikal dkk., Lee dkk., Ouelhadj & Petrovic, Leitao, dan Zhao dkk. dicek melalui pencarian web pada sesi pengerjaan (situs penerbit tidak dapat dibuka langsung dari lingkungan kerja). "
-             "Smith (1980) dan halaman jurnal Leitao ditulis dari pengetahuan penulis: mohon diverifikasi sebelum pengumpulan.")
 
 # ============================================================ why multi-agent
 stX = XP["staleness"]["avail"]; stK = KR["staleness"]["avail"]
@@ -429,4 +478,111 @@ NEXT = [
     "Integrasikan komponen yang dikembangkan tim Xpora: CNN QC (Grade A/B/Reject) menggantikan pass-rate statistik, LLM Virtual SDR menggantikan logika konsesi, dan WhatsApp Business API sebagai kanal agen produsen.",
     "Perkuat RL (difference reward, replay terkontrol, safe-RL) dan bandingkan XGBoost untuk risiko roll-over; tambahkan uji drift dan retraining online.",
     "Bandingkan dengan optimizer global (MILP/OR-Tools) sebagai batas atas optimalitas alokasi kuota.",
+]
+
+
+# ============================================================ struktur artikel penelitian (tab dokumen dosen)
+ABSTRAK = ("Konsolidasi ekspor UMKM (mis. tempe dari 40 produsen rumahan) gagal terutama karena kapasitas produsen yang berubah-ubah, komunikasi yang manual, dan kepatuhan yang terlambat, sehingga pesanan 15-27 ton sering terlambat atau tidak lengkap. "
+           "Makalah ini merancang dan mengevaluasi XCMAS, sistem multi-agen (Contract Net, BDI, governance berlevel otonomi, mobile agent) untuk alur RFQ hingga pengapalan, dikalibrasi pada Xpora (tempe, reefer) dan KrakaCoal (arang, kontainer kering). "
+           f"Pada {R['n_scenarios']} skenario simulasi berpasangan, on-time-in-full naik dari {pc(h['xpora']['otif_s'],0)} (manual) ke {pc(h['xpora']['otif_c'],0)} (agen tunggal) dan {pc(h['xpora']['otif_m'],0)} (multi-agen) pada Xpora, serta {pc(h['kraka']['otif_s'],0)} ke {pc(h['kraka']['otif_c'],0)} dan {pc(h['kraka']['otif_m'],0)} pada KrakaCoal; "
+           "sentuhan manusia turun dari sekitar seratus menjadi kurang dari dua per order. Keunggulan multi-agen atas agen tunggal kecil dan bergantung pada seberapa usang data pusat. Data sintetis dan berasumsi; validasi lapangan adalah langkah berikutnya.")
+KEYWORDS = "sistem multi-agen; Contract Net Protocol; konsorsium UMKM ekspor; rantai pasok; agen BDI; human-in-the-loop"
+
+IDENT = [["Butir", "Isi"],
+    ["Nama / NIM", f"{NAMA} / {NIM}"],
+    ["Program studi dan institusi", "Magister Kecerdasan Artifisial (S2), Universitas Gadjah Mada"],
+    ["Mata kuliah / dosen", "Agentic Enterprise: AI Agentic Technology Systems for Digital Enterprise Ecosystem / Prof. Dr. Azhari MT"],
+    ["Bentuk kelompok", "Individu (penulis bergabung terlambat ke kelas); topik tidak diambil kelompok lain (bukan Customer Complaint, Procurement, Outsourcing, Bitcoin Trading, Customer Service, Software Developer Team)"],
+    ["Judul proyek", TITLE],
+    ["Konteks nyata", "Xpora (konsorsium ekspor UMKM tempe, pilot Jawa Tengah) dan KrakaCoal (trading arang), keduanya milik/terkait penulis"],
+    ["Fokus materi (sebelum UTS)", "Single agent / multi-agent; Proyek 1 nanti mengikuti domain enterprise yang diberikan dosen"],
+    ["Repositori kode", REPO]]
+
+TUJUAN_UMUM = ("Merancang, mengimplementasikan, dan mengevaluasi sistem multi-agen yang mengotomasi sebagian besar alur order-to-shipment konsorsium UMKM ekspor, dengan manusia hanya pada keputusan berisiko, dan menunjukkan kapan arsitektur multi-agen lebih baik dari agen tunggal.")
+TUJUAN = [["Kode", "Tujuan khusus", "Ukuran keberhasilan", "Hasil (Bagian 8)"],
+    ["T1", "Membangun simulator yang dikalibrasi pada Xpora dan KrakaCoal untuk membandingkan manual, agen tunggal, dan multi-agen", "3 arsitektur pada skenario yang sama; 26 tes lulus; klaim KrakaCoal (MOQ, lead time) direproduksi", "tercapai"],
+    ["T2", "Meningkatkan OTIF dan margin dibanding proses manual", "OTIF dan margin per order lebih tinggi dari manual pada kedua profil", f"Xpora {pc(h['xpora']['otif_s'],0)} -> {pc(h['xpora']['otif_m'],0)}; KrakaCoal {pc(h['kraka']['otif_s'],0)} -> {pc(h['kraka']['otif_m'],0)}"],
+    ["T3", "Mengukur nilai desentralisasi (multi-agen vs agen tunggal) secara terisolasi", "selisih OTIF dan margin dengan CI 95%; sweep usangnya data", f"selisih OTIF {n(100*(h['xpora']['otif_m']-h['xpora']['otif_c']),0)} poin (Xpora), {n(100*(h['kraka']['otif_m']-h['kraka']['otif_c']),0)} poin (KrakaCoal); hilang bila data pusat akurat"],
+    ["T4", "Mengurangi beban manusia (sentuhan per order) dengan otonomi berlevel", "sentuhan manusia per order turun drastis", f"{n(h['xpora']['t_s'],0)} -> {n(h['xpora']['t_m'],1)} (Xpora)"],
+    ["T5", "Menjamin keamanan dan auditabilitas pesan antaragen", "7 uji serangan diblokir; audit log utuh", "7 dari 7 diblokir"],
+    ["T6", "Menunjukkan bahwa mesin yang sama berlaku lintas komoditas", "dua profil tanpa mengubah kode agen", "tercapai (tempe dan arang)"]]
+HIPOTESIS = [
+    "H1: Agen tunggal maupun multi-agen meningkatkan OTIF secara signifikan dibanding proses manual (didukung).",
+    "H2: Multi-agen unggul dari agen tunggal hanya bila data kapasitas pusat usang (didukung: selisih menyempit menuju nol saat variasi kapasitas 0).",
+    "H3: Buffer over-allocation optimal berada pada rentang menengah, bukan nol atau maksimum (didukung: puncak 15-20%).",
+    "H4: Otonomi berlevel menurunkan sentuhan manusia tanpa melewati kebijakan (didukung pada simulasi).",
+]
+
+# ---- 5.1 alur end-to-end (mengacu fig_flow.png)
+FLOW_INTRO = ("Sistem ini pada dasarnya adalah 'tim kerja digital' untuk satu pesanan ekspor. Setiap peran diisi agen perangkat lunak yang saling berkirim pesan terstruktur; manusia hanya turun tangan pada titik oranye. "
+              "Contoh angka memakai pesanan KrakaCoal 25 ton: pembeli meminta 25 ton arang; sistem meminta 25 x 1,15 = 28,75 ton kepada produsen sebagai buffer, dan tidak ada produsen yang boleh mengambil lebih dari 30% (sekitar 8,6 ton), sehingga minimal 4 produsen terlibat.")
+FLOW_STEPS = [["No.", "Pelaku", "Apa yang terjadi", "Keputusan / aturan", "Hasil"],
+    ["1", "Pembeli", "Mengirim RFQ lewat portal atau WhatsApp: produk, kuantitas, pelabuhan tujuan, tenggat kirim.", "Isian wajib diperiksa skema (Bagian 5.3).", "RFQ tercatat dengan id unik."],
+    ["2", "Sales Agent (Virtual SDR)", "Mengkualifikasi pembeli, menegosiasikan harga dan syarat dengan konsesi bertahap, membuat Letter of Intent.", "Harga tidak boleh di bawah batas kebijakan; di luar batas dieskalasi ke manusia.", "LoI dan harga sepakat."],
+    ["3", "Manusia (admin)", "Memverifikasi bukti down payment. Ini human-in-the-loop yang disengaja pada desain Xpora (level otonomi 2).", "DP terverifikasi 0,3-1,2 hari.", "Order dirilis ke produksi."],
+    ["4", "Order Agent", "Melepas order dan menyiarkan Call for Proposal (CFP) ke produsen dengan kuantitas + buffer 15%.", "Batas konsentrasi 30%; produsen skor < 0,60 diblokir.", "CFP terkirim (WhatsApp template)."],
+    ["5", "Compliance Agent", "Paralel dengan produksi: klasifikasi HS (TF-IDF + k-NN), menyusun dokumen ekspor.", "Confidence HS < 0,6 diserahkan ke tim Compliance.", "Dokumen siap sebelum barang tiba."],
+    ["6", "Produsen UMKM (agen)", "Menawar: berapa kg, harga, kapan siap, berdasarkan kapasitas nyata hari itu.", "Bid lebih dari 6 jam diabaikan.", "Daftar bid."],
+    ["7", "Order Agent", "Memberi kuota menurut skor bid (harga, ETA, quality score) dengan batas konsentrasi.", "Dua putaran: target 6 hari, lalu seluruh jendela.", "Kontrak per produsen."],
+    ["8", "Produsen", "Memproduksi dan mengirim ke gudang konsorsium.", "Gagal kirim mengurangi quality score.", "Barang tiba."],
+    ["9", "QC Agent", "Menilai grade A/B/Reject; memperbarui quality score (T = 0,8 T + 0,2 q).", "Premium butuh yield >= 0,85.", "kg lolos QC."],
+    ["*", "Order Agent (keputusan)", "Apakah total kg lolos QC cukup? Bila belum: CFP susulan ke produsen lain (re-kontrak, buffer 5%, maks 4 putaran).", "Jika ya, lanjut ke gudang.", "Pemenuhan atau putaran baru."],
+    ["10", "Lini Gudang (agen)", "Job shop tiga tahap (QC-sortir, pack/vakum, stuffing) dengan dispatch critical ratio dan monitoring kondisi mesin.", "Lembur bila kritis (Learning Agent, anggaran 12 tahap).", "Kontainer siap."],
+    ["11", "Freight Agent", "Contract Net antar carrier; memilih dengan skor hibrida (harga, transit, keandalan, peluang roll-over).", "Tanpa air freight; carrier dipilih menurut skor hibrida.", "Booking kapal."],
+    ["12", "Scout Agent (mobile)", "Berpindah ke host carrier/pelabuhan membaca jadwal secara lokal, kembali membawa ~2 KB.", "Migrasi hanya bila trust >= 0,80 dan risiko <= 0,20; jika tidak, remote pull.", "Jadwal terverifikasi."],
+    ["13", "Manusia + Governance", "Persetujuan ekspor akhir: dokumen, biaya, dan risiko ditinjau ringkas.", "Level 2-3 menurut nilai order (> 75 ribu USD wajib persetujuan).", "Izin berangkat."],
+    ["14", "Pembeli", "Kapal berangkat dan barang diterima; hasil dicatat untuk umpan balik.", "Diskon shelf-life bila perishable terlambat.", "Order selesai; quality score, trust, dan Q-table diperbarui."]]
+FLOW_WHY = [
+    "Mengapa banyak agen? Produsen, carrier, dan pembeli adalah pihak otonom yang tidak bisa diperintah pusat; mereka hanya bisa ditawari dan menawar.",
+    "Di mana 'kecerdasan' berada? (a) Compliance: klasifikasi HS berbasis ML; (b) Risk: regresi logistik peluang roll-over; (c) Order/Producer: penawaran berbasis skor dan kapasitas nyata; (d) Learning: Q-learning untuk lembur; (e) Sales: LLM sebagai lapisan bahasa.",
+    "Di mana manusia terlibat? Hanya verifikasi DP, HS confidence rendah, order bernilai tinggi, dan pengecualian; sisanya otomatis (Bagian 5.4).",
+    "Apa yang terjadi bila ada masalah? Produsen gagal kirim atau reject QC memicu putaran CFP baru; host tidak tepercaya memicu remote pull; pesan palsu ditolak oleh bus (Bagian 5.6).",
+]
+
+# ---- 5.3 kontrak input pengguna
+KONTRAK_IN = [["Pengguna", "Input (kontrak)", "Format dan validasi", "Bila tidak valid"],
+    ["Pembeli", "RFQ: produk, kuantitas (ton), incoterm, pelabuhan tujuan, tenggat kirim, harga target, sertifikat wajib", "Skema JSON; kuantitas >= MOQ profil (arang 12 t; tempe 15 t); tenggat >= lead time minimum; nilai enumerasi", "Ditolak dengan alasan; Sales Agent meminta perbaikan"],
+    ["Produsen UMKM", "Registrasi: kapasitas kg/hari, harga per kg, komoditas, sertifikat (NIB, halal, dll.); balasan CFP: kg, harga, ETA", "Template WhatsApp berisi maksimal 3 isian; angka positif dan <= kapasitas terdaftar x 1,5", "Balasan tidak sah dianggap tidak menawar; pengingat sekali"],
+    ["Admin", "Bukti DP; persetujuan (setuju / tolak / ubah); parameter kebijakan (buffer, cap konsentrasi, ambang skor, anggaran lembur)", "Kartu keputusan satu layar (Bagian 5.4); parameter bertipe dengan batas min-maks", "Nilai di luar batas ditolak; perubahan dicatat pada audit log"],
+    ["Tim Compliance", "Keputusan HS dan dokumen untuk kasus confidence rendah", "Kode HS 4-6 digit terdaftar pada katalog", "Kasus tetap terbuka dan naik prioritas"],
+    ["Sistem lain", "ERP/CRM, sensor CV, jadwal kapal", "Event bertipe dan bertanda tangan (HMAC)", "Ditolak oleh bus dan dicatat"]]
+KONTRAK_OUT = [["Penerima", "Keluaran (kontrak)", "Kapan"],
+    ["Pembeli", "LoI, status order (dikonfirmasi, produksi, stuffing, berangkat), dokumen ekspor, ETA", "Tiap perubahan status"],
+    ["Produsen", "CFP, kuota yang diberikan, hasil QC dan skor mutu", "Saat CFP, award, dan setelah QC"],
+    ["Admin", "Kartu keputusan (rekomendasi, alasan, aksi default), ringkasan harian, peringatan risiko", "Bila ada pengecualian; ringkasan sekali sehari"],
+    ["Audit / regulator", "Log berantai-hash: siapa mengirim apa, kapan, dengan otoritas apa", "Selalu, tidak dapat diubah diam-diam"]]
+
+# ---- 5.4 cognitive overload
+COGNITIVE = [
+    ("Routing berdasarkan pengecualian", f"Sistem tidak meminta manusia menyetujui semua hal; hanya risiko tinggi, confidence rendah, atau nilai besar. Hasilnya sentuhan manusia per order turun dari {n(h['xpora']['t_s'],0)} (manual) menjadi {n(h['xpora']['t_m'],1)} (Xpora)."),
+    ("Kartu keputusan satu layar", "Setiap permintaan persetujuan berisi: rekomendasi sistem, tiga alasan utama, dampak biaya/risiko, dan aksi default. Admin cukup memilih Setuju / Ubah / Tolak."),
+    ("Ringkasan (digest) dan batching", "Notifikasi non-kritis dikumpulkan menjadi ringkasan harian; hanya peringatan kritis (mis. kapal akan ditinggalkan) yang dikirim langsung."),
+    ("Prioritas dan batas volume", "Antrean persetujuan diurutkan menurut nilai x urgensi; batas jumlah item aktif per admin, sisanya menunggu atau dieskalasi."),
+    ("Bahasa dan format sederhana", "Produsen UMKM hanya menerima template WhatsApp pendek dengan maksimal tiga isian dan angka baku; tanpa istilah teknis."),
+    ("Otonomi progresif", "Level otonomi naik hanya setelah tingkat kesalahan terukur di bawah ambang; semua aksi dapat dijelaskan lewat audit log."),
+    ("Fan-out terbatas", "CFP tidak disiarkan ke semua produsen pada skala besar, tetapi ke subset regional; agen tidak dibanjiri pesan (Bagian 8.5)."),
+]
+
+# ---- 5.5 jadwal, approval, eskalasi
+JADWAL = [["Peristiwa", "Batas waktu / SLA", "Jika terlewat (eskalasi)", "Status"],
+    ["Balasan produsen terhadap CFP", f"median {C.REPLY_MEDIAN_H} jam; bid diterima sampai {C.CFP_DEADLINE_H:.0f} jam", "CFP susulan ke produsen berikutnya menurut skor", "dalam simulasi"],
+    ["Verifikasi DP oleh admin", f"{C.DP_VERIFY_DAYS[0]}-{C.DP_VERIFY_DAYS[1]} hari", "Pengingat ke admin cadangan", "dalam simulasi (SOURCE: desain Xpora)"],
+    ["Persetujuan order bernilai tinggi", f"{C.APPROVAL_DAYS} hari; wajib bila nilai > {C.APPROVAL_VALUE_USD:,} USD".replace(",", "."), "Order ditahan, bukan dieksekusi otomatis", "dalam simulasi"],
+    ["Produksi sasaran", f"{C.PROD_TARGET_DAYS:.0f} hari (target), lalu seluruh jendela", "Putaran kontrak baru, buffer 5%", "dalam simulasi"],
+    ["Klasifikasi HS", "otomatis; confidence < 0,6 ke tim Compliance", "Kasus dinaikkan prioritasnya", "dalam simulasi"],
+    ["Migrasi Scout", "trust host >= 0,80 dan risiko <= 0,20", "Fallback remote pull", "dalam simulasi"],
+    ["Ringkasan harian ke admin", "sekali sehari", "Peringatan kritis tetap langsung", "rancangan (belum disimulasikan)"]]
+APPROVAL_LEVELS = [["Level otonomi (Bab 2)", "Contoh keputusan", "Siapa yang menyetujui"],
+    ["4 Delegate", "Dispatch lini gudang, kuota pada konsentrasi normal, HS confidence >= 0,60", "Tidak ada; audit log"],
+    ["3 Supervise", "Lembur; carrier di bawah batas biaya", "Manusia dapat membatalkan dalam jendela waktu"],
+    ["2 Approve", "Verifikasi DP; HS confidence rendah; order > 75 ribu USD", "Admin / tim Compliance"],
+    ["1 Assist", "Belum dipakai pada mode rekomendasi", "Manusia memutuskan"]]
+
+# ---- 5.6 koordinasi dan negosiasi
+NEGO = [
+    ("Contract Net (kuota produsen, lini gudang, carrier)", "Manajer menyiarkan CFP; kontraktor menjawab PROPOSE atau menolak; manajer ACCEPT/REJECT. FSM percakapan (IDLE, BIDDING, AWARDED, COMPLETED) menolak urutan pesan yang salah; tiap leg punya id percakapan sendiri."),
+    ("Skor penilaian bid", "Bid produsen dinilai dari harga, ETA, dan quality score: s_j = w_p(1 - p~_j) + w_e e_j + w_q q_j dengan bobot (0,3; 0,5; 0,2). Carrier dinilai dengan skor hibrida h = g[alpha z + (1 - alpha) 100 (1 - p)] (harga/transit + peluang roll-over)."),
+    ("Negosiasi harga (Sales Agent)", "Konsesi bergantung waktu dengan batas kebijakan; harga sepakat dibandingkan dengan titik Nash bargaining. Model kesabaran pembeli dan waktu balas manusia bersifat asumsi (eksploratif)."),
+    ("Penanganan konflik dan kegagalan", "Batas konsentrasi 30% mencegah satu produsen menguasai order; kegagalan kirim memicu re-kontrak; skor mutu memberi insentif keandalan; carrier tidak tepercaya diblokir oleh trust."),
+    ("Keamanan pesan", "HMAC-SHA256, nonce dan jendela waktu, capability, audit log berantai-hash; tujuh serangan diuji dan seluruhnya diblokir (Tabel keamanan)."),
 ]

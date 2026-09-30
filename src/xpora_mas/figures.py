@@ -78,6 +78,89 @@ def architecture():
     save(fig, "fig_architecture.png")
 
 
+
+# ============================================================ 1b. end-to-end flow (swimlane)
+def flow():
+    lanes = ["Pembeli", "Sales Agent\n(Virtual SDR)", "Manusia\n(admin / tim)", "Order Agent", "Produsen UMKM\n(x n agen)", "QC Agent",
+             "Gudang\n(lini QC-pack-stuf)", "Compliance\nAgent", "Freight + Scout\nAgent"]
+    LH, X0, CW, W, H = 0.92, 1.85, 1.22, 1.12, 0.64
+    nL = len(lanes); Ht = nL * LH + 1.3
+    fig, ax = plt.subplots(figsize=(15.6, 9.6)); ax.set_xlim(0, 15.6); ax.set_ylim(0, Ht + 0.4); ax.axis("off")
+    ax.text(7.8, Ht + 0.1, "Alur end-to-end XCMAS: dari RFQ pembeli sampai kapal berangkat", ha="center", fontsize=14, weight="bold", color=NAVY)
+    ytop = Ht - 0.35
+    def ly(i): return ytop - (i + 0.5) * LH
+    def cx(c): return X0 + c * CW + W / 2
+    for i, nm in enumerate(lanes):
+        y0 = ytop - (i + 1) * LH
+        ax.add_patch(Rectangle((0.1, y0), 15.4, LH, fc="#F8FAFC" if i % 2 == 0 else "white", ec="#E5E7EB", lw=0.8))
+        ax.text(0.2, y0 + LH / 2, nm, ha="left", va="center", fontsize=9.6, weight="bold", color=NAVY)
+    yb = ytop - nL * LH
+    ax.add_patch(Rectangle((0.1, yb - 0.55), 15.4, 0.5, fc=NAVY, ec=NAVY))
+    ax.text(7.8, yb - 0.3, "GOVERNANCE: HMAC + nonce, capability, audit log berantai-hash, level otonomi 1-4, cap 30%, blokir skor < 0,60",
+            ha="center", va="center", fontsize=8.6, weight="bold", color="white")
+    ax.text(7.8, yb - 0.85, "Umpan balik setelah tiap order: hasil kirim/QC memperbarui quality score produsen, trust carrier, dan Q-table (Learning Agent)  |  oranye = titik keputusan manusia (human-in-the-loop)",
+            ha="center", va="center", fontsize=8.4, color=GREY)
+    def node(c, l, n, txt, ec=TEAL, fc="white", human=False):
+        x, y = X0 + c * CW, ly(l) - H / 2
+        ax.add_patch(FancyBboxPatch((x, y), W, H, boxstyle="round,pad=0.01,rounding_size=0.06", fc="#FFF7ED" if human else fc, ec=ORANGE if human else ec, lw=2.0 if human else 1.5))
+        ax.text(x + 0.02, y + H - 0.02, str(n), fontsize=8, weight="bold", color="white", ha="center", va="center",
+                bbox=dict(boxstyle="circle,pad=0.22", fc=ORANGE if human else NAVY, ec="none"))
+        ax.text(x + W / 2, y + H / 2 - 0.02, txt, ha="center", va="center", fontsize=7.6, color=NAVY, linespacing=1.15)
+        return (x + W / 2, y + H / 2)
+    N = {}
+    N[1] = node(0, 0, 1, "Kirim RFQ\n(portal / WA)", ec=GREY)
+    N[2] = node(1, 1, 2, "Kualifikasi,\nnegosiasi, LoI", ec=ORANGE)
+    N[3] = node(2, 2, 3, "Verifikasi DP\n(level 2)", human=True)
+    ax.text(cx(2), ly(0) + 0.02, "Bayar DP", ha="center", va="center", fontsize=8, color=GREY, bbox=dict(boxstyle="round,pad=0.25", fc="white", ec=GREY))
+    N[4] = node(3, 3, 4, "Rilis order + CFP\nke produsen (+15%)")
+    N[5] = node(3, 7, 5, "Dokumen + HS\nparalel (ML)")
+    N[6] = node(4, 4, 6, "Bid: kg, harga,\nETA (kapasitas asli)")
+    N[7] = node(5, 3, 7, "Award kuota\n(skor, cap 30%)")
+    N[8] = node(6, 4, 8, "Produksi\ndan kirim")
+    N[9] = node(7, 5, 9, "Grade A/B/Reject\n+ quality score")
+    N[10] = node(8, 6, 10, "Lini gudang:\nQC-pack-stuffing")
+    N[11] = node(8, 8, 11, "CNP carrier,\nskor hibrida")
+    N[12] = node(9, 8, 12, "Scout mobile:\ncek jadwal host")
+    N[13] = node(9, 2, 13, "Persetujuan\nekspor (lv 2-3)", human=True)
+    N[14] = node(10, 0, 14, "Kapal berangkat,\nbuyer terima", ec=GREY)
+    # diamond
+    dx, dy = cx(7), ly(3)
+    ax.add_patch(plt.Polygon([(dx - 0.62, dy), (dx, dy + 0.4), (dx + 0.62, dy), (dx, dy - 0.4)], fc="#FEF2F2", ec=RED, lw=1.6))
+    ax.text(dx, dy, "Total kg\ncukup?", ha="center", va="center", fontsize=7.6, weight="bold", color=RED)
+    A = lambda a, b, **k: arrow(ax, a, b, **k)
+    # main flow arrows
+    A((N[1][0] + .3, N[1][1] - .32), (N[2][0] - .3, N[2][1] + .32)); A((N[2][0] + .56, N[2][1] + .12), (cx(2) - .42, ly(0) - .14))
+    A((cx(2), ly(0) - .2), (N[3][0], N[3][1] + .34))
+    A((N[3][0] + .6, N[3][1]), (N[4][0] - .05, N[4][1] + .32), rad=-0.2)
+    A((N[4][0], N[4][1] - .32), (N[5][0], N[5][1] + .32), color=GREY, ls=":")
+    A((N[4][0] + .6, N[4][1] - .1), (N[6][0] - .6, N[6][1] + .25), rad=0.0)
+    A((N[6][0] + .6, N[6][1] + .2), (N[7][0] - .6, N[7][1] - .25))
+    A((N[7][0] + .6, N[7][1] - .2), (N[8][0] - .6, N[8][1] + .22))
+    A((N[8][0] + .6, N[8][1] - .2), (N[9][0] - .6, N[9][1] + .2))
+    A((N[9][0], N[9][1] + .32), (dx, dy - .4))
+    # cukup -> lini gudang
+    A((dx + .62, dy), (N[10][0] + 0.05, N[10][1] + .32), rad=-0.35, color=GREEN)
+    ax.text(dx + .8, dy + .14, "ya", color=GREEN, fontsize=8.5, weight="bold")
+    # tidak -> CFP susulan (kembali ke award)
+    A((dx - .62, dy), (N[7][0] + .6, N[7][1]), color=RED)
+    ax.text(dx - 1.02, dy + .16, "tidak: CFP\nsusulan", color=RED, fontsize=7.6, ha="center", weight="bold")
+    # gudang -> carrier / approval
+    A((N[10][0] + .6, N[10][1]), (cx(9) - .05, ly(2) - .34 - 0.0), rad=0.0, color=NAVY) if False else None
+    A((N[10][0], N[10][1] - .32), (N[11][0], N[11][1] + .32))
+    A((N[11][0] + .6, N[11][1]), (N[12][0] - .6, N[12][1]))
+    A((N[12][0], N[12][1] + .32), (N[13][0], N[13][1] - .32))
+    ax.plot([N[5][0] + .6, cx(9) + 0.45], [N[5][1], N[5][1]], color=GREY, lw=1.3, ls=":")
+    A((cx(9) + 0.45, N[5][1]), (cx(9) + 0.45, N[13][1] - .32), color=GREY, ls=":")
+    ax.plot([N[10][0] + .6, cx(9) - 0.45], [N[10][1], N[10][1]], color=NAVY, lw=1.3)
+    A((cx(9) - 0.45, N[10][1]), (cx(9) - 0.45, N[13][1] - .32))
+    A((N[13][0] + .6, N[13][1]), (N[14][0], N[14][1] - .32), rad=0.25)
+    # annotations
+    ax.text(cx(3) - 0.6, ly(7) - 0.5, "HS confidence < 0,6\n-> tim Compliance", fontsize=7.4, color=ORANGE, ha="left", va="center")
+    ax.text(cx(9) + 0.7, ly(8) - 0.05, "trust host < 0,8\n-> remote pull", fontsize=7.4, color=ORANGE, ha="left", va="center")
+    ax.text(cx(4) + 0.7, ly(5) + 0.05, "produsen gagal kirim\natau reject -> masuk\nputaran CFP susulan", fontsize=7.4, color=RED, ha="left", va="center")
+    save(fig, "fig_flow.png")
+
+
 # ============================================================ 2. contract net sequence (quota allocation)
 def cnp_sequence():
     fig, ax = plt.subplots(figsize=(13, 6.9)); ax.set_xlim(0, 13); ax.set_ylim(0, 6.9); ax.axis("off")
@@ -329,7 +412,7 @@ def results_figs(res):
 
 def main():
     models, aux = build_models()
-    architecture(); cnp_sequence(); bdi_cycle(); gantt(models); sourcing_detail(models)
+    architecture(); flow(); cnp_sequence(); bdi_cycle(); gantt(models); sourcing_detail(models)
     p = OUT / "results.json"
     if p.exists():
         results_figs(json.loads(p.read_text()))
